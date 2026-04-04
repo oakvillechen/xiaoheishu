@@ -9,6 +9,16 @@ import CreatePostModal from '@/components/feed/CreatePostModal';
 export default function Header() {
   const { user, login, logout } = useAuth();
 
+  const handleLogin = async () => {
+    try {
+      await login();
+    } catch (error) {
+      const message = error instanceof Error ? error.message : '登录失败，请稍后重试';
+      alert(message);
+      console.error('Login failed:', error);
+    }
+  };
+
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-white/80 backdrop-blur-md dark:bg-slate-950/80">
       <div className="container mx-auto px-4 h-16 flex items-center justify-between">
@@ -44,7 +54,7 @@ export default function Header() {
               </Button>
             </>
           ) : (
-            <Button onClick={login} size="sm" className="rounded-full bg-rose-500 hover:bg-rose-600">
+            <Button onClick={handleLogin} size="sm" className="rounded-full bg-rose-500 hover:bg-rose-600">
               <LogIn className="h-4 w-4 mr-1" /> 登录 / 注册
             </Button>
           )}

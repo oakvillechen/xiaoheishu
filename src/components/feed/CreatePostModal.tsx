@@ -145,12 +145,12 @@ export default function CreatePostModal() {
           </Button>
         }
       />
-      <DialogContent className="max-w-[calc(100%-1rem)] w-full sm:max-w-2xl rounded-3xl p-0 max-h-[92vh] overflow-hidden">
+      <DialogContent className="max-w-[calc(100%-1rem)] w-full sm:max-w-2xl rounded-3xl p-0 max-h-[92dvh] overflow-hidden">
         <DialogHeader className="px-5 pt-5 pb-2 border-b border-slate-100">
           <DialogTitle className="text-xl font-bold">分享你的发现</DialogTitle>
         </DialogHeader>
-        <form onSubmit={handleSubmit} className="flex flex-col h-[calc(92vh-3rem)]">
-          <div className="space-y-4 p-5 overflow-y-auto">
+        <form onSubmit={handleSubmit} className="flex flex-col h-[calc(92dvh-3rem)]">
+          <div className="space-y-4 p-5 pb-24 overflow-y-auto">
             <div className="space-y-2">
               <Label htmlFor="images">图片（最多9张）</Label>
               <label
@@ -166,7 +166,6 @@ export default function CreatePostModal() {
                 type="file"
                 accept="image/*"
                 multiple
-                capture="environment"
                 className="hidden"
                 onChange={handleSelectFiles}
               />
@@ -259,7 +258,7 @@ export default function CreatePostModal() {
             {errorMessage && <p className="text-sm text-rose-500">{errorMessage}</p>}
           </div>
 
-          <div className="p-4 border-t border-slate-100 bg-white">
+          <div className="sticky bottom-0 p-4 border-t border-slate-100 bg-white pb-[calc(env(safe-area-inset-bottom)+1rem)]">
             <Button
               type="submit"
               className="w-full rounded-xl bg-rose-500 hover:bg-rose-600 h-11"

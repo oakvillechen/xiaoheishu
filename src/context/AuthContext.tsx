@@ -1,7 +1,7 @@
 'use client';
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
-import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signOut } from 'firebase/auth';
+import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
 import { auth } from '@/lib/firebase';
 import axios from 'axios';
 
@@ -59,7 +59,32 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
-    await signInWithPopup(auth, provider);
+
+    try {
+      await signInWithPopup(auth, provider);
+      return;
+    } catch (error) {
+      const authCode =
+        typeof error === 'object' && error && 'code' in error
+          ? String((error as { code?: unknown }).code)
+          : '';
+
+      if (
+        authCode === 'auth/popup-blocked' ||
+        authCode === 'auth/popup-closed-by-user' ||
+        authCode === 'auth/cancelled-popup-request'
+      ) {
+        await signInWithRedirect(auth, provider);
+        return;
+      }
+
+      if (authCode === 'auth/unauthorized-domain') {
+        const host = typeof window !== 'undefined' ? window.location.hostname : '';
+        throw new Error(`当前域名未加入 Firebase 授权域名: ${host}`);
+      }
+
+      throw error;
+    }
   };
 
   const logout = async () => {
