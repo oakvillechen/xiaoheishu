@@ -1,13 +1,53 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, User, Plus } from 'lucide-react';
+import { LogIn, LogOut, ShieldCheck } from 'lucide-react';
 import Link from 'next/link';
 import CreatePostModal from '@/components/feed/CreatePostModal';
+import axios from 'axios';
 
 export default function Header() {
   const { user, login, logout } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
+
+  useEffect(() => {
+    let canceled = false;
+
+    const loadRole = async () => {
+      if (!user) {
+        if (!canceled) {
+          setIsAdmin(false);
+        }
+        return;
+      }
+
+      try {
+        const token = await user.getIdToken();
+        const res = await axios.get('/api/users/me', {
+          headers: {
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!canceled) {
+          setIsAdmin(String(res.data?.user?.role || 'user') === 'admin');
+        }
+      } catch (error) {
+        console.error('Failed to load user role:', error);
+        if (!canceled) {
+          setIsAdmin(false);
+        }
+      }
+    };
+
+    void loadRole();
+
+    return () => {
+      canceled = true;
+    };
+  }, [user]);
 
   const handleLogin = async () => {
     try {
@@ -48,6 +88,13 @@ export default function Header() {
                    {user.displayName || '我的'}
                  </span>
               </div>
+              {isAdmin && (
+                <Link href="/admin">
+                  <Button variant="outline" size="sm" className="rounded-full">
+                    <ShieldCheck className="mr-1 h-4 w-4" /> 管理员入口
+                  </Button>
+                </Link>
+              )}
               <CreatePostModal />
               <Button variant="ghost" size="sm" onClick={logout} className="rounded-full text-slate-500">
                 退出

@@ -3,6 +3,8 @@ import { db } from '@/db';
 import { posts, users, comments } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getImageDisplayUrl } from '@/lib/google-drive';
+import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
+import { isAdminUser } from '@/lib/user-access';
 
 function parseImageIds(images: string | null): string[] {
   if (!images) {
@@ -89,5 +91,39 @@ export async function GET(
   } catch (error) {
     console.error('Error fetching post detail:', error);
     return NextResponse.json({ error: 'Internal Server Error' }, { status: 500 });
+  }
+}
+
+export async function DELETE(
+  request: Request,
+  { params: paramsPromise }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const uid = await verifyFirebaseTokenFromRequest(request);
+    if (!(await isAdminUser(uid))) {
+      return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
+    }
+
+    const params = await paramsPromise;
+    const postId = Number.parseInt(params.id, 10);
+    if (!Number.isFinite(postId)) {
+      return NextResponse.json({ error: 'Invalid post id' }, { status: 400 });
+    }
+
+    await db.delete(comments).where(eq(comments.postId, postId));
+    const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ id: posts.id });
+
+    if (deleted.length === 0) {
+      return NextResponse.json({ error: 'Post not found' }, { status: 404 });
+    }
+
+    return NextResponse.json({ ok: true, deletedPostId: deleted[0].id });
+  } catch (error) {
+    if (error instanceof AuthTokenError) {
+      return NextResponse.json({ error: error.message }, { status: 401 });
+    }
+
+    console.error('Error deleting post:', error);
+    return NextResponse.json({ error: 'Failed to delete post' }, { status: 500 });
   }
 }
