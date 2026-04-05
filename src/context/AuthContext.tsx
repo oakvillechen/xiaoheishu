@@ -59,6 +59,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
   const login = async () => {
     const provider = new GoogleAuthProvider();
+    const clientId = process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID;
+    if (clientId) {
+      provider.setCustomParameters({ client_id: clientId });
+    }
 
     try {
       await signInWithPopup(auth, provider);
