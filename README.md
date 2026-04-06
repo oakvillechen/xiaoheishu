@@ -29,6 +29,10 @@ To learn more about Next.js, take a look at the following resources:
 
 You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
 
+## API Docs
+
+- Posting APIs: `docs/posting-api.md`
+
 ## Agent Publish API (No Login)
 
 You can publish a post without Firebase login by calling:

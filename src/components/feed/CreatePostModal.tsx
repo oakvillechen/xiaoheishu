@@ -13,6 +13,8 @@ import axios from 'axios';
 
 const MAX_IMAGES = 9;
 
+import { SUPPORTED_CITIES_CN } from '@/lib/constants/cities';
+
 export default function CreatePostModal() {
   const [open, setOpen] = useState(false);
   const { user } = useAuth();
@@ -216,13 +218,20 @@ export default function CreatePostModal() {
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
                 <Label htmlFor="city">城市</Label>
-                <Input
+                <select
                   id="city"
-                  placeholder="例如: Oakville"
-                  className="rounded-xl"
+                  className="w-full h-10 px-3 rounded-xl border border-input bg-background text-sm"
                   value={formData.city}
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
-                />
+                >
+                  <option value="">选择城市 (可选)</option>
+                  {SUPPORTED_CITIES_CN.map((city: string) => (
+                    <option key={city} value={city}>
+                      {city}
+                    </option>
+                  ))}
+                  <option value="Other">其他</option>
+                </select>
               </div>
               <div className="space-y-2">
                 <Label htmlFor="category">分类</Label>

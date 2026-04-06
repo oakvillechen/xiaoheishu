@@ -6,24 +6,12 @@ import { useQuery } from '@tanstack/react-query';
 import { useEffect, useMemo, useState } from 'react';
 import { ArrowUp, Loader2, RefreshCw } from 'lucide-react';
 
+import { CITY_MAP, SUPPORTED_CITIES_CN } from '@/lib/constants/cities';
+
 export default function Home() {
   const [activeCategory, setActiveCategory] = useState('全部');
   const [onlyImagePosts, setOnlyImagePosts] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
-
-  const cityMap: Record<string, string> = {
-    '多伦多': 'Toronto',
-    '温哥华': 'Vancouver',
-    '蒙特利尔': 'Montreal',
-    '卡尔加里': 'Calgary',
-    '渥太华': 'Ottawa',
-    '埃德蒙顿': 'Edmonton',
-    '密西沙加': 'Mississauga',
-    '温尼伯': 'Winnipeg',
-    '哈利法克斯': 'Halifax',
-    '爱德华王子岛': 'PEI',
-    '奥克维尔': 'Oakville',
-  };
 
   const catMap: Record<string, string> = {
     '职场就业': 'Job',
@@ -33,9 +21,7 @@ export default function Home() {
 
   const categories = [
     '全部', '职场就业', '留学移民', '吃喝玩乐',
-    '多伦多', '温哥华', '蒙特利尔', '卡尔加里',
-    '渥太华', '埃德蒙顿', '密西沙加', '温尼伯',
-    '哈利法克斯', '爱德华王子岛', '奥克维尔'
+    ...SUPPORTED_CITIES_CN
   ];
 
   const { data: allPosts, isLoading, isFetching, refetch } = useQuery({
@@ -63,8 +49,8 @@ export default function Home() {
     return source.filter((post: any) => {
       const inCategory = (() => {
         if (activeCategory === '全部') return true;
-        if (cityMap[activeCategory]) {
-          return post.city === cityMap[activeCategory];
+        if (CITY_MAP[activeCategory]) {
+          return post.city === CITY_MAP[activeCategory];
         }
         if (catMap[activeCategory]) {
           return post.category === catMap[activeCategory];

@@ -36,6 +36,8 @@ function parseImageIds(images: string | null): PostImageIds {
   }
 }
 
+import { normalizeCityName } from '@/lib/constants/cities';
+
 export async function GET() {
   try {
     const allPosts = await db
@@ -95,13 +97,15 @@ export async function POST(req: Request) {
       return NextResponse.json({ error: 'Invalid image ids' }, { status: 400 });
     }
 
+    const normalizedCity = normalizeCityName(city);
+
     const newPost = await db.insert(posts).values({
       title,
       content,
       link: link || null,
       images: JSON.stringify(imageIds),
       userId,
-      city: city || null,
+      city: normalizedCity,
       tags: tags || null,
       category: category || null,
     }).returning();
