@@ -4,8 +4,10 @@ import { posts, users } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
 import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
 import { getImageDisplayUrl } from '@/lib/google-drive';
+import { revalidatePath } from 'next/cache';
 
 export const runtime = 'nodejs';
+export const dynamic = 'force-dynamic';
 
 type PostImageIds = string[];
 
@@ -110,6 +112,7 @@ export async function POST(req: Request) {
       category: category || null,
     }).returning();
 
+    revalidatePath('/');
     return NextResponse.json(newPost);
   } catch (error) {
     if (error instanceof AuthTokenError) {
