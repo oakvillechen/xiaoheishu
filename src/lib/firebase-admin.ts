@@ -68,6 +68,16 @@ export async function verifyFirebaseTokenFromRequest(request: Request): Promise<
     throw new AuthTokenError('Empty Authorization token');
   }
 
+  // --- Bot Secret Bypass ---
+  // If the server has a bot secret configured, and the token matches it,
+  // we bypass Firebase validation and assume the identity of the configured bot user.
+  if (process.env.API_BOT_SECRET && idToken === process.env.API_BOT_SECRET) {
+    if (!process.env.API_BOT_USER_ID) {
+      throw new AuthTokenError('Server is missing API_BOT_USER_ID configuration');
+    }
+    return process.env.API_BOT_USER_ID;
+  }
+
   try {
     const decoded = await getFirebaseAdminAuth().verifyIdToken(idToken);
     return decoded.uid;
