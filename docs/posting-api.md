@@ -336,9 +336,11 @@ openssl rand -base64 48 | tr -d '\n'
   - `city`：中英文都可以（`Oakville` / `奥克维尔`），同时匹配旧数据里的中文/英文写法
   - `category`：中英文都可以（`Life` / `生活`），可选值见 `src/lib/constants/categories.ts`
   - `hasImage=1`：只返回有图片的帖子
+  - `q`：搜索词（≤ 50 字，超过返回 400），在标题、正文、标签里做不区分大小写的模糊匹配；`%`、`_` 按普通字符处理；可以和 city / category / cursor 一起用
 
 ```bash
 curl "https://xiaoheishu.ca/api/posts?limit=20&city=Oakville&category=Rental"
+curl "https://xiaoheishu.ca/api/posts?q=%E7%A7%9F%E6%88%BF&city=Mississauga"   # q=租房
 ```
 
 ## 6. 城市和分类的规范值

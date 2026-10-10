@@ -4,9 +4,9 @@ import Header from '@/components/layout/Header';
 import Feed from '@/components/feed/Feed';
 import { useInfiniteQuery } from '@tanstack/react-query';
 import { useCallback, useEffect, useMemo, useState } from 'react';
-import { ArrowUp, Loader2, RefreshCw } from 'lucide-react';
+import { ArrowUp, Loader2, RefreshCw, Search, X } from 'lucide-react';
 
-import { CITIES } from '@/lib/constants/cities';
+import { TAB_CITIES } from '@/lib/constants/cities';
 import { CATEGORIES } from '@/lib/constants/categories';
 import type { PostCardProps } from '@/components/feed/PostCard';
 import { FLASH_MESSAGE_KEY } from '@/components/post/AdminDeletePostButton';
@@ -17,6 +17,7 @@ type FeedPage = {
 };
 
 const PAGE_SIZE = 20;
+const SEARCH_MAX_LENGTH = 50;
 const ALL = '';
 
 export default function Home() {
@@ -25,6 +26,16 @@ export default function Home() {
   const [onlyImagePosts, setOnlyImagePosts] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
   const [flashMessage, setFlashMessage] = useState('');
+  const [searchInput, setSearchInput] = useState('');
+  const [searchQuery, setSearchQuery] = useState('');
+
+  // 输入防抖：停止输入 300ms 后才发起搜索
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      setSearchQuery(searchInput.trim().slice(0, SEARCH_MAX_LENGTH));
+    }, 300);
+    return () => window.clearTimeout(timer);
+  }, [searchInput]);
 
   // 显示从其它页面带过来的一次性提示（例如“帖子已删除”）
   useEffect(() => {
@@ -45,7 +56,7 @@ export default function Home() {
   }, []);
 
   const categoryTabs = useMemo(() => [{ en: ALL, cn: '全部' }, ...CATEGORIES], []);
-  const cityTabs = useMemo(() => [{ en: ALL, cn: '全部城市', featured: false }, ...CITIES], []);
+  const cityTabs = useMemo(() => [{ en: ALL, cn: '全部城市', featured: false }, ...TAB_CITIES], []);
 
   const {
     data,
@@ -56,7 +67,7 @@ export default function Home() {
     fetchNextPage,
     refetch,
   } = useInfiniteQuery({
-    queryKey: ['posts', 'feed', activeCategory, activeCity, onlyImagePosts],
+    queryKey: ['posts', 'feed', activeCategory, activeCity, onlyImagePosts, searchQuery],
     initialPageParam: null as string | null,
     queryFn: async ({ pageParam }): Promise<FeedPage> => {
       const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
@@ -64,6 +75,7 @@ export default function Home() {
       if (activeCategory) params.set('category', activeCategory);
       if (activeCity) params.set('city', activeCity);
       if (onlyImagePosts) params.set('hasImage', '1');
+      if (searchQuery) params.set('q', searchQuery);
 
       const res = await fetch(`/api/posts?${params.toString()}`);
       if (!res.ok) {
@@ -106,6 +118,41 @@ export default function Home() {
 
       <section className="sticky top-16 z-40 border-b border-slate-200 bg-white/96 backdrop-blur-md">
         <div className="mx-auto w-full max-w-[1360px] px-4">
+          <form
+            role="search"
+            className="pt-3"
+            onSubmit={(event) => {
+              event.preventDefault();
+              setSearchQuery(searchInput.trim().slice(0, SEARCH_MAX_LENGTH));
+            }}
+          >
+            <div className="relative mx-auto w-full max-w-xl">
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
+              <input
+                type="search"
+                enterKeyHint="search"
+                value={searchInput}
+                maxLength={SEARCH_MAX_LENGTH}
+                onChange={(event) => setSearchInput(event.target.value)}
+                placeholder="搜索标题、正文、标签，如：租房、Oakville"
+                aria-label="搜索帖子"
+                className="h-10 w-full rounded-full border border-slate-200 bg-slate-50 pl-9 pr-9 text-sm outline-none transition-colors focus:border-rose-400 focus:bg-white [&::-webkit-search-cancel-button]:hidden"
+              />
+              {searchInput && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSearchInput('');
+                    setSearchQuery('');
+                  }}
+                  className="absolute right-2 top-1/2 flex h-6 w-6 -translate-y-1/2 items-center justify-center rounded-full text-slate-400 hover:bg-slate-200 hover:text-slate-600"
+                  aria-label="清除搜索"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              )}
+            </div>
+          </form>
           <div className="overflow-x-auto scrollbar-hide">
             <div suppressHydrationWarning className="flex h-12 items-center gap-6">
               {categoryTabs.map((cat) => (
@@ -161,6 +208,7 @@ export default function Home() {
           hasMore={!!hasNextPage}
           isLoadingMore={isFetchingNextPage}
           onLoadMore={handleLoadMore}
+          emptyText={searchQuery ? '没有找到相关帖子' : undefined}
         />
       )}
 

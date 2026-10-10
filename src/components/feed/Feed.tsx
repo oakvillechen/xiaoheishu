@@ -8,9 +8,16 @@ type FeedProps = {
   hasMore?: boolean;
   isLoadingMore?: boolean;
   onLoadMore?: () => void;
+  emptyText?: string;
 };
 
-export default function Feed({ posts, hasMore = false, isLoadingMore = false, onLoadMore }: FeedProps) {
+export default function Feed({
+  posts,
+  hasMore = false,
+  isLoadingMore = false,
+  onLoadMore,
+  emptyText = '暂无内容，快来分享第一篇吧！',
+}: FeedProps) {
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -40,7 +47,7 @@ export default function Feed({ posts, hasMore = false, isLoadingMore = false, on
   if (!posts || posts.length === 0) {
     return (
       <div className="flex flex-col items-center justify-center py-20 text-slate-400">
-        <p className="text-sm">暂无内容，快来分享第一篇吧！</p>
+        <p className="text-sm">{emptyText}</p>
       </div>
     );
   }

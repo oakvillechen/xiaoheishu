@@ -13,7 +13,7 @@ import axios from 'axios';
 
 const MAX_IMAGES = 9;
 
-import { CITIES } from '@/lib/constants/cities';
+import { TAB_CITIES } from '@/lib/constants/cities';
 import { CATEGORIES } from '@/lib/constants/categories';
 
 export default function CreatePostModal() {
@@ -226,7 +226,7 @@ export default function CreatePostModal() {
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 >
                   <option value="">选择城市 (可选)</option>
-                  {CITIES.map((city) => (
+                  {TAB_CITIES.map((city) => (
                     <option key={city.en} value={city.en}>
                       {city.cn}
                     </option>
