@@ -345,3 +345,76 @@ curl "https://xiaoheishu.ca/api/posts?limit=20&city=Oakville&category=Rental"
 
 写入时（用户发帖、机器人发帖、Agent 发帖）城市和分类会自动转成英文规范值，例如 `多伦多` → `Toronto`、`生活` → `Life`、`Real Estate` → `RealEstate`。
 支持的城市见 `src/lib/constants/cities.ts`（大多伦多地区在前：Toronto、Oakville、Burlington、Mississauga、Milton、Markham、Richmond Hill……），分类见 `src/lib/constants/categories.ts`（Life、Food、Travel、RealEstate、Rental、Job、Study、Immigration、News）。未识别的城市/分类会原样保存。
+
+---
+
+## 7. `images` 的正确传法 & 避免 shell 吞掉 `$`
+
+### 7.1 images 必须是 JSON 数组
+
+```json
+"images": [
+  "https://res.cloudinary.com/<cloud-name>/image/upload/v1/a.jpg",
+  "https://res.cloudinary.com/<cloud-name>/image/upload/c_fill,w_400/v1/b.jpg"
+]
+```
+
+服务端会兼容两种常见的错误写法：
+- 把数组写成了 JSON 字符串：`"images": "[\"https://...a.jpg\"]"`
+- 把多个地址用逗号或换行拼成一个字符串：`"images": "https://...a.jpg,https://...b.jpg"`
+
+拆分时只在“逗号/换行后面紧跟 `http(s)://` 或 `/`”的位置切开，所以 Cloudinary 变换参数里的逗号（如 `c_fill,w_400`）不会被切断。
+**但请不要依赖这个兼容逻辑**：其它带逗号的 URL（如 `…/cdn-cgi/image/fit=scale-down,width=800/…`）如果不是数组，仍可能出错。最稳妥的是：先 `POST /api/agent/upload` 上传，再把返回的 `url` 放进数组。
+
+### 7.2 避免 shell 把 `$` 当成变量
+
+在 bash/zsh 里用双引号包 JSON 时，`$1,006,106` 里的 `$1` 会被当成变量展开成空字符串，变成 `,006,106`。
+推荐做法：
+
+```bash
+# ✅ 用单引号包住整个 JSON（单引号内 $ 不会展开）
+curl -X POST https://xiaoheishu.ca/api/agent/publish \
+  -H 'Content-Type: application/json' -H "x-api-key: $XIAOHEISHU_API_KEY" \
+  -d '{"title":"新盘速览","content":"镇屋 $1,006,106 起","images":["https://res.cloudinary.com/<cloud>/image/upload/v1/a.jpg"]}'
+
+# ✅ 内容很长时，写到文件里再用 --data-binary @file 发送
+cat > /tmp/post.json <<'JSON'
+{"title":"新盘速览","content":"镇屋 $1,006,106 起","images":["https://res.cloudinary.com/<cloud>/image/upload/v1/a.jpg"]}
+JSON
+curl -X POST https://xiaoheishu.ca/api/agent/publish \
+  -H 'Content-Type: application/json' -H "x-api-key: $XIAOHEISHU_API_KEY" \
+  --data-binary @/tmp/post.json
+```
+
+注意 heredoc 的结束标记要加引号（`<<'JSON'`），否则里面的 `$` 一样会被展开。用 Python / Node 等程序直接发 JSON 则没有这个问题。
+
+---
+
+## 8. 维护接口（修改 / 删除帖子）
+
+用于修复旧帖子（换掉失效图片、修正文、删重复帖）。**需要单独的环境变量 `AGENT_ADMIN_API_KEY`**；不配置时接口返回 `404`（等于不存在）。发帖 Key、`API_BOT_SECRET`、Firebase 登录都不能调用。
+
+```env
+AGENT_ADMIN_API_KEY=<另一个强随机 key，可逗号分隔多个>
+AGENT_ADMIN_RATE_LIMIT_MAX=60          # 可选，默认每 Key 每小时 60 次
+AGENT_ADMIN_RATE_LIMIT_WINDOW_SEC=3600
+```
+
+### 8.1 修改帖子 `PATCH /api/agent/admin/posts/:id`
+
+只允许改 `title`、`content`、`images`（至少一项）；`images` 只接受本站 Cloudinary 图片，1–9 张。
+**默认 dryRun=true**：只返回 `before` / `after` 对比，不写库；body 里加 `"dryRun": false`（或 URL `?dryRun=false`）才真正执行。
+
+```bash
+curl -X PATCH https://xiaoheishu.ca/api/agent/admin/posts/862 \
+  -H 'Content-Type: application/json' -H "x-api-key: $AGENT_ADMIN_API_KEY" \
+  -d '{"images":["https://res.cloudinary.com/<cloud>/image/upload/v1/new.jpg"],"dryRun":false}'
+```
+
+### 8.2 删除帖子 `DELETE /api/agent/admin/posts/:id`
+
+- 默认 dryRun：`DELETE /api/agent/admin/posts/848` 只返回将要删除的内容
+- 真正删除：`?dryRun=false`
+- 帖子有评论时返回 `409`；确认要连评论一起删：`?dryRun=false&force=true`
+
+每次操作都会打 `[agent-admin]` 日志；非 dryRun 的操作同时写入表 `xhs_admin_audit_log`（需执行 `drizzle/0004_admin_audit_log.sql`，表不存在时只打日志，不影响操作）。

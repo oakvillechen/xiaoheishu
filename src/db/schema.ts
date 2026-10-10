@@ -49,3 +49,15 @@ export const rateLimits = sqliteTable('xhs_rate_limits', {
   count: integer('count').notNull().default(0),
   resetAt: integer('reset_at').notNull(),
 });
+
+// 维护接口（/api/agent/admin/*）操作日志
+export const adminAuditLog = sqliteTable('xhs_admin_audit_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  action: text('action').notNull(), // 'patch-post' | 'delete-post'
+  postId: integer('post_id'),
+  actor: text('actor').notNull(), // 'agent-admin:<key 哈希前 12 位>'
+  dryRun: integer('dry_run', { mode: 'boolean' }).notNull(),
+  before: text('before'), // JSON
+  after: text('after'), // JSON
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});

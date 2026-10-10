@@ -150,6 +150,11 @@ export const RATE_LIMITS = {
     max: parsePositiveInt(process.env.AGENT_PUBLISH_RATE_LIMIT_MAX, 30),
     windowSec: parsePositiveInt(process.env.AGENT_PUBLISH_RATE_LIMIT_WINDOW_SEC, 60),
   }),
+  agentAdmin: (): RateLimitRule => ({
+    name: 'agent-admin',
+    max: parsePositiveInt(process.env.AGENT_ADMIN_RATE_LIMIT_MAX, 60),
+    windowSec: parsePositiveInt(process.env.AGENT_ADMIN_RATE_LIMIT_WINDOW_SEC, 3600),
+  }),
   agentUpload: (): RateLimitRule => ({
     name: 'agent-upload',
     max: parsePositiveInt(process.env.AGENT_UPLOAD_RATE_LIMIT_MAX, 60),
