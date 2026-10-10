@@ -42,3 +42,4 @@ next-env.d.ts
 
 # local sqlite
 local.db*
+maintenance_*.md
