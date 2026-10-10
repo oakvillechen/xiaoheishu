@@ -9,6 +9,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
 import { displayCityName } from '@/lib/constants/cities';
+import AdminDeletePostButton from '@/components/post/AdminDeletePostButton';
 
 export default function PostDetail({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise);
@@ -297,6 +298,11 @@ export default function PostDetail({ params: paramsPromise }: { params: Promise<
               </div>
 
               <div className="mt-3 flex items-center justify-end gap-3 text-slate-500">
+                {post?.id && (
+                  <div className="mr-auto">
+                    <AdminDeletePostButton postId={post.id} />
+                  </div>
+                )}
                 <button className="inline-flex h-6 w-6 items-center justify-center" aria-label="点赞">
                   <Heart className="h-5 w-5" />
                 </button>

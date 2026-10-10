@@ -9,6 +9,7 @@ import { ArrowUp, Loader2, RefreshCw } from 'lucide-react';
 import { CITIES } from '@/lib/constants/cities';
 import { CATEGORIES } from '@/lib/constants/categories';
 import type { PostCardProps } from '@/components/feed/PostCard';
+import { FLASH_MESSAGE_KEY } from '@/components/post/AdminDeletePostButton';
 
 type FeedPage = {
   items: PostCardProps['post'][];
@@ -23,6 +24,25 @@ export default function Home() {
   const [activeCity, setActiveCity] = useState<string>(ALL);
   const [onlyImagePosts, setOnlyImagePosts] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [flashMessage, setFlashMessage] = useState('');
+
+  // 显示从其它页面带过来的一次性提示（例如“帖子已删除”）
+  useEffect(() => {
+    let message = '';
+    try {
+      message = window.sessionStorage.getItem(FLASH_MESSAGE_KEY) || '';
+      if (message) window.sessionStorage.removeItem(FLASH_MESSAGE_KEY);
+    } catch {
+      // ignore
+    }
+    if (!message) return;
+    const show = window.setTimeout(() => setFlashMessage(message), 0);
+    const hide = window.setTimeout(() => setFlashMessage(''), 3000);
+    return () => {
+      window.clearTimeout(show);
+      window.clearTimeout(hide);
+    };
+  }, []);
 
   const categoryTabs = useMemo(() => [{ en: ALL, cn: '全部' }, ...CATEGORIES], []);
   const cityTabs = useMemo(() => [{ en: ALL, cn: '全部城市', featured: false }, ...CITIES], []);
@@ -142,6 +162,15 @@ export default function Home() {
           isLoadingMore={isFetchingNextPage}
           onLoadMore={handleLoadMore}
         />
+      )}
+
+      {flashMessage && (
+        <div
+          role="status"
+          className="fixed left-1/2 top-20 z-[60] -translate-x-1/2 rounded-full bg-slate-900/90 px-4 py-2 text-sm text-white shadow-lg"
+        >
+          {flashMessage}
+        </div>
       )}
 
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">
