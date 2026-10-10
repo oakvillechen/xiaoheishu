@@ -4,13 +4,14 @@ import { useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query';
 import axios from 'axios';
-import { Loader2, MessageCircle, Heart, Share2, MapPin, Calendar, Send, ChevronLeft, ChevronRight, Bookmark } from 'lucide-react';
+import { Loader2, MessageCircle, Share2, MapPin, Calendar, Send, ChevronLeft, ChevronRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { displayCityName, normalizeCityName, CITIES } from '@/lib/constants/cities';
 import { cityPath } from '@/lib/site';
 import AdminDeletePostButton from '@/components/post/AdminDeletePostButton';
+import ReactionButton from '@/components/post/ReactionButton';
 
 type CommentItem = {
   id: number;
@@ -31,6 +32,8 @@ type PostDetailData = {
     userName?: string | null;
     userImage?: string | null;
     createdAt?: string | null;
+    likeCount?: number;
+    favoriteCount?: number;
   };
   comments: CommentItem[];
 };
@@ -338,12 +341,12 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
                     <AdminDeletePostButton postId={post.id} />
                   </div>
                 )}
-                <button className="inline-flex h-6 w-6 items-center justify-center" aria-label="点赞">
-                  <Heart className="h-5 w-5" />
-                </button>
-                <button className="inline-flex h-6 w-6 items-center justify-center" aria-label="收藏">
-                  <Bookmark className="h-5 w-5" />
-                </button>
+                {post?.id && (
+                  <>
+                    <ReactionButton kind="like" postId={post.id} initialCount={post.likeCount ?? 0} fetchOnMount />
+                    <ReactionButton kind="favorite" postId={post.id} initialCount={post.favoriteCount ?? 0} fetchOnMount />
+                  </>
+                )}
                 <button className="inline-flex h-6 w-6 items-center justify-center" aria-label="评论">
                   <MessageCircle className="h-5 w-5" />
                 </button>

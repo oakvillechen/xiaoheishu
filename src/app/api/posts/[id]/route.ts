@@ -3,6 +3,7 @@ import { db } from '@/db';
 import { posts, comments } from '@/db/schema';
 import { eq } from 'drizzle-orm';
 import { getPostDetail } from '@/lib/posts-server';
+import { deleteReactionsForPost } from '@/lib/reactions';
 import { AuthTokenError, authErrorResponse } from '@/lib/firebase-admin';
 import { requireAdmin } from '@/lib/user-access';
 import { revalidatePath } from 'next/cache';
@@ -44,6 +45,7 @@ export async function DELETE(
     }
 
     await db.delete(comments).where(eq(comments.postId, postId));
+    await deleteReactionsForPost(postId);
     const deleted = await db.delete(posts).where(eq(posts.id, postId)).returning({ id: posts.id });
 
     if (deleted.length === 0) {
