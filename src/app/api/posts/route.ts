@@ -45,6 +45,12 @@ function parseImageIds(images: string | null): PostImageIds {
 
 
 const DEFAULT_PAGE_SIZE = 20;
+const MAX_QUERY_LENGTH = 50;
+
+/** 转义 LIKE 通配符（配合 ESCAPE '\\' 使用） */
+function escapeLike(value: string): string {
+  return value.replace(/[\\%_]/g, (ch) => `\\${ch}`);
+}
 const MAX_PAGE_SIZE = 50;
 
 type Cursor = { createdAt: number; id: number };
@@ -102,18 +108,19 @@ const createdAtKey = sql`coalesce(${posts.createdAt}, 0)`;
  * GET /api/posts
  *
  * - 不带任何查询参数：返回全部帖子的数组（旧行为，供后台等旧调用方使用）。
- * - 带 limit / cursor / city / category 任一参数：分页模式，返回 { items, nextCursor }。
+ * - 带 limit / cursor / city / category / hasImage / q 任一参数：分页模式，返回 { items, nextCursor }。
  *   - limit：默认 20，最大 50
  *   - cursor：上一页返回的 nextCursor
  *   - city：城市（中英文均可，如 Oakville / 奥克维尔），会同时匹配旧数据里的中文/英文写法
  *   - category：分类（中英文均可，如 Life / 生活）
  *   - hasImage=1：只要有图片的帖子
+ *   - q：搜索词（≤ 50 字），在标题、正文、标签里做不区分大小写的模糊匹配，可与其它筛选组合
  */
 export async function GET(req: Request) {
   try {
     const url = new URL(req.url);
     const params = url.searchParams;
-    const paginated = ['limit', 'cursor', 'city', 'category', 'hasImage'].some((key) => params.has(key));
+    const paginated = ['limit', 'cursor', 'city', 'category', 'hasImage', 'q'].some((key) => params.has(key));
 
     if (!paginated) {
       const allPosts = await db
@@ -140,6 +147,17 @@ export async function GET(req: Request) {
     const category = normalizeCategory(categoryParam);
     if (category) {
       conditions.push(inArray(sql`lower(trim(${posts.category}))`, categoryMatchValues(category)));
+    }
+
+    const q = (params.get('q') || '').trim().replace(/\s+/g, ' ');
+    if (q.length > MAX_QUERY_LENGTH) {
+      return NextResponse.json({ error: `搜索词不能超过 ${MAX_QUERY_LENGTH} 个字` }, { status: 400 });
+    }
+    if (q) {
+      const pattern = `%${escapeLike(q.toLowerCase())}%`;
+      conditions.push(
+        sql`(lower(${posts.title}) like ${pattern} escape '\\' or lower(coalesce(${posts.content}, '')) like ${pattern} escape '\\' or lower(coalesce(${posts.tags}, '')) like ${pattern} escape '\\')`,
+      );
     }
 
     if (params.get('hasImage') === '1') {

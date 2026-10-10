@@ -9,6 +9,8 @@ export type CityDef = {
   cn: string;
   aliases?: string[];
   featured?: boolean;
+  /** 是否显示在首页城市栏和发帖下拉框里；默认 true。设为 false 的城市仍参与规范化和筛选，旧帖子不受影响。 */
+  showInTabs?: boolean;
 };
 
 export const CITIES: CityDef[] = [
@@ -27,14 +29,14 @@ export const CITIES: CityDef[] = [
   { en: 'Hamilton', cn: '哈密尔顿', aliases: ['汉密尔顿', '咸美顿'] },
   // 其它加拿大城市
   { en: 'Waterloo', cn: '滑铁卢', aliases: ['滑铁卢市', 'KW', 'Kitchener-Waterloo'] },
-  { en: 'Ottawa', cn: '渥太华' },
-  { en: 'Montreal', cn: '蒙特利尔', aliases: ['Montréal', '满地可', '蒙城'] },
-  { en: 'Vancouver', cn: '温哥华', aliases: ['温市', '大温', '大温哥华'] },
-  { en: 'Calgary', cn: '卡尔加里', aliases: ['卡城'] },
-  { en: 'Edmonton', cn: '埃德蒙顿', aliases: ['爱民顿', '埃德蒙顿市'] },
-  { en: 'Winnipeg', cn: '温尼伯', aliases: ['温尼伯市'] },
-  { en: 'Halifax', cn: '哈利法克斯', aliases: ['哈法'] },
-  { en: 'PEI', cn: '爱德华王子岛', aliases: ['P.E.I.', 'Prince Edward Island', '爱岛'] },
+  { en: 'Ottawa', cn: '渥太华', showInTabs: false },
+  { en: 'Montreal', cn: '蒙特利尔', aliases: ['Montréal', '满地可', '蒙城'], showInTabs: false },
+  { en: 'Vancouver', cn: '温哥华', aliases: ['温市', '大温', '大温哥华'], showInTabs: false },
+  { en: 'Calgary', cn: '卡尔加里', aliases: ['卡城'], showInTabs: false },
+  { en: 'Edmonton', cn: '埃德蒙顿', aliases: ['爱民顿', '埃德蒙顿市'], showInTabs: false },
+  { en: 'Winnipeg', cn: '温尼伯', aliases: ['温尼伯市'], showInTabs: false },
+  { en: 'Halifax', cn: '哈利法克斯', aliases: ['哈法'], showInTabs: false },
+  { en: 'PEI', cn: '爱德华王子岛', aliases: ['P.E.I.', 'Prince Edward Island', '爱岛'], showInTabs: false },
 ];
 
 const aliasIndex: Map<string, string> = (() => {
@@ -58,6 +60,9 @@ export const SUPPORTED_CITIES_EN = CITIES.map((c) => c.en);
 
 /** 所有支持的中文城市名（按显示顺序） */
 export const SUPPORTED_CITIES_CN = CITIES.map((c) => c.cn);
+
+/** 首页城市栏 / 发帖下拉框显示的城市（showInTabs !== false） */
+export const TAB_CITIES = CITIES.filter((c) => c.showInTabs !== false);
 
 /** 首页重点城市 */
 export const FEATURED_CITIES = CITIES.filter((c) => c.featured);
