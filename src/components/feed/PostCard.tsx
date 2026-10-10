@@ -28,7 +28,11 @@ export default function PostCard({ post }: PostCardProps) {
 
   const coverImage = imageCount > 0 ? images[activeImageIndex] : undefined;
 
-  const handleOpenDetail = (event: React.MouseEvent<HTMLButtonElement>) => {
+  const handleOpenDetail = (event: React.MouseEvent<HTMLAnchorElement>) => {
+    // 新标签页打开（Ctrl/⌘/中键）时走浏览器默认行为
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey || event.button !== 0) {
+      return;
+    }
     event.preventDefault();
     if (isOpening) {
       return;
@@ -131,11 +135,11 @@ export default function PostCard({ post }: PostCardProps) {
         </div>
       </div>
 
-      <button
-        type="button"
+      <a
+        href={`/posts/${post.id}`}
         onClick={handleOpenDetail}
         className="absolute inset-0 z-10"
-        aria-label="查看详情"
+        aria-label={`查看详情：${post.title}`}
       />
     </article>
   );
