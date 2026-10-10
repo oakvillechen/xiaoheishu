@@ -13,7 +13,8 @@ import axios from 'axios';
 
 const MAX_IMAGES = 9;
 
-import { SUPPORTED_CITIES_CN } from '@/lib/constants/cities';
+import { CITIES } from '@/lib/constants/cities';
+import { CATEGORIES } from '@/lib/constants/categories';
 
 export default function CreatePostModal() {
   const [open, setOpen] = useState(false);
@@ -225,9 +226,9 @@ export default function CreatePostModal() {
                   onChange={(e) => setFormData({ ...formData, city: e.target.value })}
                 >
                   <option value="">选择城市 (可选)</option>
-                  {SUPPORTED_CITIES_CN.map((city: string) => (
-                    <option key={city} value={city}>
-                      {city}
+                  {CITIES.map((city) => (
+                    <option key={city.en} value={city.en}>
+                      {city.cn}
                     </option>
                   ))}
                   <option value="Other">其他</option>
@@ -241,10 +242,11 @@ export default function CreatePostModal() {
                   value={formData.category}
                   onChange={(e) => setFormData({ ...formData, category: e.target.value })}
                 >
-                  <option value="Life">生活</option>
-                  <option value="Job">职场</option>
-                  <option value="Immigration">移民</option>
-                  <option value="Study">留学</option>
+                  {CATEGORIES.map((cat) => (
+                    <option key={cat.en} value={cat.en}>
+                      {cat.cn}
+                    </option>
+                  ))}
                 </select>
               </div>
             </div>

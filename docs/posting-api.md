@@ -324,3 +324,24 @@ openssl rand -base64 48 | tr -d '\n'
 3. 使用多 key（`AGENT_PUBLISH_API_KEYS`）便于灰度轮换。
 4. 每个调用方使用独立 key，泄露后可单独吊销。
 5. 定期轮换 key，并观察 401/429 日志。
+
+---
+
+## 5. 读取帖子列表 `GET /api/posts`
+
+- **不带参数**：返回全部帖子数组（旧行为，后台管理页在用）。
+- **分页模式**（带 `limit` / `cursor` / `city` / `category` / `hasImage` 任一参数）：返回 `{ "items": [...], "nextCursor": "..." | null }`
+  - `limit`：默认 20，最大 50
+  - `cursor`：上一页的 `nextCursor`；没有下一页时为 `null`
+  - `city`：中英文都可以（`Oakville` / `奥克维尔`），同时匹配旧数据里的中文/英文写法
+  - `category`：中英文都可以（`Life` / `生活`），可选值见 `src/lib/constants/categories.ts`
+  - `hasImage=1`：只返回有图片的帖子
+
+```bash
+curl "https://xiaoheishu.ca/api/posts?limit=20&city=Oakville&category=Rental"
+```
+
+## 6. 城市和分类的规范值
+
+写入时（用户发帖、机器人发帖、Agent 发帖）城市和分类会自动转成英文规范值，例如 `多伦多` → `Toronto`、`生活` → `Life`、`Real Estate` → `RealEstate`。
+支持的城市见 `src/lib/constants/cities.ts`（大多伦多地区在前：Toronto、Oakville、Burlington、Mississauga、Milton、Markham、Richmond Hill……），分类见 `src/lib/constants/categories.ts`（Life、Food、Travel、RealEstate、Rental、Job、Study、Immigration、News）。未识别的城市/分类会原样保存。

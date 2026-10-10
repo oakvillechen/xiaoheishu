@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { posts, users } from '@/db/schema';
-import { desc, eq } from 'drizzle-orm';
+import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
 import { AuthTokenError, authErrorResponse, verifyRequestIdentity } from '@/lib/firebase-admin';
 import { botMayUseExternalImages, isAllowedImageRef, isHttpsImageUrl } from '@/lib/image-refs';
 import { getImageDisplayUrl } from '@/lib/google-drive';
 import { revalidatePath } from 'next/cache';
-import { normalizeCityName } from '@/lib/constants/cities';
+import { cityMatchValues, normalizeCityName } from '@/lib/constants/cities';
+import { categoryMatchValues, normalizeCategory } from '@/lib/constants/categories';
 import { createPostSchema, parseJsonBody } from '@/lib/validation';
 import { RATE_LIMITS, rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
@@ -43,36 +44,139 @@ function parseImageIds(images: string | null): PostImageIds {
 }
 
 
-export async function GET() {
+const DEFAULT_PAGE_SIZE = 20;
+const MAX_PAGE_SIZE = 50;
+
+type Cursor = { createdAt: number; id: number };
+
+function encodeCursor(cursor: Cursor): string {
+  return Buffer.from(`${cursor.createdAt}:${cursor.id}`).toString('base64url');
+}
+
+function decodeCursor(raw: string | null): Cursor | null {
+  if (!raw) return null;
   try {
-    const allPosts = await db
-      .select({
-        id: posts.id,
-        title: posts.title,
-        content: posts.content,
-        link: posts.link,
-        images: posts.images,
-        city: posts.city,
-        tags: posts.tags,
-        category: posts.category,
-        userName: users.displayName,
-        userImage: users.photoURL,
-        createdAt: posts.createdAt,
-      })
+    const [createdAt, id] = Buffer.from(raw, 'base64url').toString('utf8').split(':').map((v) => Number.parseInt(v, 10));
+    if (Number.isFinite(createdAt) && Number.isFinite(id)) {
+      return { createdAt, id };
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
+const postSelection = {
+  id: posts.id,
+  title: posts.title,
+  content: posts.content,
+  link: posts.link,
+  images: posts.images,
+  city: posts.city,
+  tags: posts.tags,
+  category: posts.category,
+  userName: users.displayName,
+  userImage: users.photoURL,
+  createdAt: posts.createdAt,
+};
+
+type PostRow = {
+  images: string | null;
+  createdAt: Date | null;
+  id: number;
+};
+
+function toResponsePost<T extends PostRow>(post: T) {
+  const imageIds = parseImageIds(post.images);
+  return {
+    ...post,
+    images: imageIds,
+    imageUrls: imageIds.map((value) => getImageDisplayUrl(value)),
+  };
+}
+
+// 排序键：created_at 为秒级时间戳，空值按 0 处理；同一秒内按 id 倒序
+const createdAtKey = sql`coalesce(${posts.createdAt}, 0)`;
+
+/**
+ * GET /api/posts
+ *
+ * - 不带任何查询参数：返回全部帖子的数组（旧行为，供后台等旧调用方使用）。
+ * - 带 limit / cursor / city / category 任一参数：分页模式，返回 { items, nextCursor }。
+ *   - limit：默认 20，最大 50
+ *   - cursor：上一页返回的 nextCursor
+ *   - city：城市（中英文均可，如 Oakville / 奥克维尔），会同时匹配旧数据里的中文/英文写法
+ *   - category：分类（中英文均可，如 Life / 生活）
+ *   - hasImage=1：只要有图片的帖子
+ */
+export async function GET(req: Request) {
+  try {
+    const url = new URL(req.url);
+    const params = url.searchParams;
+    const paginated = ['limit', 'cursor', 'city', 'category', 'hasImage'].some((key) => params.has(key));
+
+    if (!paginated) {
+      const allPosts = await db
+        .select(postSelection)
+        .from(posts)
+        .leftJoin(users, eq(posts.userId, users.id))
+        .orderBy(desc(posts.createdAt));
+
+      return NextResponse.json(allPosts.map(toResponsePost));
+    }
+
+    const limitParam = Number.parseInt(params.get('limit') || '', 10);
+    const limit = Number.isFinite(limitParam) && limitParam > 0 ? Math.min(limitParam, MAX_PAGE_SIZE) : DEFAULT_PAGE_SIZE;
+
+    const conditions: SQL[] = [];
+
+    const cityParam = params.get('city');
+    const city = normalizeCityName(cityParam);
+    if (city) {
+      conditions.push(inArray(sql`lower(trim(${posts.city}))`, cityMatchValues(city)));
+    }
+
+    const categoryParam = params.get('category');
+    const category = normalizeCategory(categoryParam);
+    if (category) {
+      conditions.push(inArray(sql`lower(trim(${posts.category}))`, categoryMatchValues(category)));
+    }
+
+    if (params.get('hasImage') === '1') {
+      conditions.push(sql`${posts.images} is not null and trim(${posts.images}) not in ('', '[]')`);
+    }
+
+    const cursorParam = params.get('cursor');
+    const cursor = decodeCursor(cursorParam);
+    if (cursorParam && !cursor) {
+      return NextResponse.json({ error: 'Invalid cursor' }, { status: 400 });
+    }
+    if (cursor) {
+      conditions.push(
+        sql`(${createdAtKey} < ${cursor.createdAt} or (${createdAtKey} = ${cursor.createdAt} and ${posts.id} < ${cursor.id}))`,
+      );
+    }
+
+    const rows = await db
+      .select(postSelection)
       .from(posts)
       .leftJoin(users, eq(posts.userId, users.id))
-      .orderBy(desc(posts.createdAt));
+      .where(conditions.length > 0 ? and(...conditions) : undefined)
+      .orderBy(desc(createdAtKey), desc(posts.id))
+      .limit(limit + 1);
 
-    const normalized = allPosts.map((post) => {
-      const imageIds = parseImageIds(post.images);
-      return {
-        ...post,
-        images: imageIds,
-        imageUrls: imageIds.map((value) => getImageDisplayUrl(value)),
-      };
-    });
+    const hasMore = rows.length > limit;
+    const pageRows = hasMore ? rows.slice(0, limit) : rows;
+    const last = pageRows[pageRows.length - 1];
+    const nextCursor =
+      hasMore && last
+        ? encodeCursor({
+            createdAt: last.createdAt ? Math.floor(last.createdAt.getTime() / 1000) : 0,
+            id: last.id,
+          })
+        : null;
 
-    return NextResponse.json(normalized);
+    return NextResponse.json({ items: pageRows.map(toResponsePost), nextCursor });
   } catch (error) {
     console.error('Error fetching posts:', error);
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
@@ -115,7 +219,7 @@ export async function POST(req: Request) {
       userId,
       city: normalizeCityName(city),
       tags,
-      category,
+      category: normalizeCategory(category),
     }).returning();
 
     revalidatePath('/');
