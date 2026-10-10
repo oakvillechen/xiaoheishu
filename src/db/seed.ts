@@ -1,7 +1,10 @@
+import { assertDangerousScriptAllowed } from '../lib/db-script-guard';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 import { users, posts } from './schema';
+
+assertDangerousScriptAllowed('seed', 'file:local.db');
 
 const client = createClient({
   url: 'file:local.db', // Use local for seeding 50 posts

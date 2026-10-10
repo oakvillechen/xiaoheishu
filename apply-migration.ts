@@ -1,6 +1,9 @@
+import { assertDangerousScriptAllowed } from './src/lib/db-script-guard';
 import { createClient } from '@libsql/client';
 import fs from 'fs';
 import 'dotenv/config';
+
+assertDangerousScriptAllowed('apply-migration', process.env.DATABASE_URL);
 
 const client = createClient({
   url: process.env.DATABASE_URL!,

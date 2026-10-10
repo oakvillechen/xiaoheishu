@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { onAuthStateChanged, User, GoogleAuthProvider, signInWithPopup, signInWithRedirect, signOut } from 'firebase/auth';
-import { auth } from '@/lib/firebase';
+import { getFirebaseAuth } from '@/lib/firebase';
 import axios from 'axios';
 
 interface AuthContextType {
@@ -42,6 +42,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   useEffect(() => {
+    const auth = getFirebaseAuth();
+    if (!auth) {
+      // 服务端渲染或未配置 Firebase（例如 Preview 环境缺少 NEXT_PUBLIC_FIREBASE_*）：视为未登录
+      console.warn('Firebase is not configured; login is disabled.');
+      void Promise.resolve().then(() => setLoading(false));
+      return;
+    }
+
     const unsubscribe = onAuthStateChanged(auth, async (user) => {
       setUser(user);
       setLoading(false);
@@ -58,6 +66,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const login = async () => {
+    const auth = getFirebaseAuth();
+    if (!auth) {
+      throw new Error('登录服务未配置（缺少 Firebase 配置）');
+    }
     const provider = new GoogleAuthProvider();
 
     try {
@@ -88,6 +100,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const logout = async () => {
+    const auth = getFirebaseAuth();
+    if (!auth) {
+      return;
+    }
     await signOut(auth);
   };
 

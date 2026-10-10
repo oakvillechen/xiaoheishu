@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { desc, eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { userMessages, users } from '@/db/schema';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
+import { AuthTokenError, authErrorResponse, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 
@@ -28,7 +28,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ messages });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to fetch messages:', error);
@@ -53,7 +53,7 @@ export async function PATCH(request: Request) {
     return NextResponse.json({ ok: true, updatedCount: updated.length });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to mark messages as read:', error);

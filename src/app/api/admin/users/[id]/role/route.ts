@@ -2,8 +2,8 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
-import { isAdminUser } from '@/lib/user-access';
+import { AuthTokenError, authErrorResponse } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/user-access';
 
 export const runtime = 'nodejs';
 
@@ -29,10 +29,7 @@ export async function PATCH(
   { params: paramsPromise }: { params: Promise<{ id: string }> },
 ) {
   try {
-    const uid = await verifyFirebaseTokenFromRequest(request);
-    if (!(await isAdminUser(uid))) {
-      return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
-    }
+    await requireAdmin(request);
 
     const params = await paramsPromise;
     const targetUserId = String(params.id || '').trim();
@@ -63,7 +60,7 @@ export async function PATCH(
     return NextResponse.json({ ok: true, user: updated[0] });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to update user role:', error);

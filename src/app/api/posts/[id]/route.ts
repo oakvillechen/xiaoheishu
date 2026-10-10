@@ -3,8 +3,9 @@ import { db } from '@/db';
 import { posts, users, comments } from '@/db/schema';
 import { eq, desc } from 'drizzle-orm';
 import { getImageDisplayUrl } from '@/lib/google-drive';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
-import { isAdminUser } from '@/lib/user-access';
+import { AuthTokenError, authErrorResponse } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/user-access';
+import { revalidatePath } from 'next/cache';
 
 function parseImageIds(images: string | null): string[] {
   if (!images) {
@@ -38,8 +39,11 @@ export async function GET(
 ) {
   try {
     const params = await paramsPromise;
-    const postId = parseInt(params.id);
-    
+    const postId = Number.parseInt(params.id, 10);
+    if (!Number.isFinite(postId) || postId <= 0) {
+      return NextResponse.json({ error: 'Invalid post id' }, { status: 400 });
+    }
+
     // Fetch post with user info
     const postData = await db
       .select({
@@ -99,10 +103,7 @@ export async function DELETE(
   { params: paramsPromise }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const uid = await verifyFirebaseTokenFromRequest(request);
-    if (!(await isAdminUser(uid))) {
-      return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
-    }
+    await requireAdmin(request);
 
     const params = await paramsPromise;
     const postId = Number.parseInt(params.id, 10);
@@ -117,10 +118,11 @@ export async function DELETE(
       return NextResponse.json({ error: 'Post not found' }, { status: 404 });
     }
 
+    revalidatePath('/');
     return NextResponse.json({ ok: true, deletedPostId: deleted[0].id });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Error deleting post:', error);

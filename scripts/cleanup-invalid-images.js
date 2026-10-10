@@ -11,6 +11,16 @@ async function main() {
     throw new Error('Missing DATABASE_URL or DATABASE_AUTH_TOKEN in .env');
   }
 
+  if (APPLY) {
+    // 危险操作保护：真正删除数据前需要显式确认；远程库（非 file:）默认拒绝
+    if (String(process.env.CONFIRM_DANGEROUS_DB_SCRIPT || '').trim().toLowerCase() !== 'yes') {
+      throw new Error('拒绝 --apply：请设置 CONFIRM_DANGEROUS_DB_SCRIPT=yes 后再运行');
+    }
+    if (!String(url).startsWith('file:') && process.env.ALLOW_PRODUCTION_DB !== 'yes-i-am-sure') {
+      throw new Error('拒绝 --apply：DATABASE_URL 指向远程（生产）数据库，如确需运行请再设置 ALLOW_PRODUCTION_DB=yes-i-am-sure');
+    }
+  }
+
   const client = createClient({ url, authToken });
 
   const whereClause = "images LIKE '%smoke-image-%' OR title = 'Smoke Test Post'";

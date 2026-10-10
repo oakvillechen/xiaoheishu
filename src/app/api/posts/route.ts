@@ -2,9 +2,13 @@ import { NextResponse } from 'next/server';
 import { db } from '@/db';
 import { posts, users } from '@/db/schema';
 import { desc, eq } from 'drizzle-orm';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
+import { AuthTokenError, authErrorResponse, verifyRequestIdentity } from '@/lib/firebase-admin';
+import { botMayUseExternalImages, isAllowedImageRef, isHttpsImageUrl } from '@/lib/image-refs';
 import { getImageDisplayUrl } from '@/lib/google-drive';
 import { revalidatePath } from 'next/cache';
+import { normalizeCityName } from '@/lib/constants/cities';
+import { createPostSchema, parseJsonBody } from '@/lib/validation';
+import { RATE_LIMITS, rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
@@ -38,7 +42,6 @@ function parseImageIds(images: string | null): PostImageIds {
   }
 }
 
-import { normalizeCityName } from '@/lib/constants/cities';
 
 export async function GET() {
   try {
@@ -78,45 +81,48 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const uid = await verifyFirebaseTokenFromRequest(req);
-    const body = await req.json();
-    const { title, content, link, images, userId, city, tags, category } = body;
+    const { uid, viaBotSecret } = await verifyRequestIdentity(req);
 
-    if (!title || !content || !userId) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+    const parsed = await parseJsonBody(req, createPostSchema);
+    if (!parsed.ok) {
+      return parsed.response;
     }
+    const { title, content, link, images, userId, city, tags, category } = parsed.data;
 
     if (uid !== userId) {
       return NextResponse.json({ error: 'Forbidden userId' }, { status: 403 });
     }
 
-    if (!Array.isArray(images) || images.length === 0 || images.length > 9) {
-      return NextResponse.json({ error: 'Images must be an array with 1-9 items' }, { status: 400 });
+    const allowExternal = viaBotSecret && botMayUseExternalImages();
+    const badImage = images.find((ref) => !(isAllowedImageRef(ref) || (allowExternal && isHttpsImageUrl(ref))));
+    if (badImage) {
+      return NextResponse.json(
+        { error: '图片地址不合法：只接受本站上传的图片（Cloudinary）或站内路径', field: 'images' },
+        { status: 400 },
+      );
     }
 
-    const imageIds = images.filter((value: unknown): value is string => typeof value === 'string' && value.length > 0);
-    if (imageIds.length !== images.length) {
-      return NextResponse.json({ error: 'Invalid image ids' }, { status: 400 });
+    const limit = await rateLimit(uid, RATE_LIMITS.post());
+    if (!limit.allowed) {
+      return rateLimitResponse(limit);
     }
-
-    const normalizedCity = normalizeCityName(city);
 
     const newPost = await db.insert(posts).values({
       title,
       content,
-      link: link || null,
-      images: JSON.stringify(imageIds),
+      link,
+      images: JSON.stringify(images),
       userId,
-      city: normalizedCity,
-      tags: tags || null,
-      category: category || null,
+      city: normalizeCityName(city),
+      tags,
+      category,
     }).returning();
 
     revalidatePath('/');
     return NextResponse.json(newPost);
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Error creating post:', error);

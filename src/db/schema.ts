@@ -42,3 +42,10 @@ export const userMessages = sqliteTable('xhs_user_messages', {
   readAt: integer('read_at', { mode: 'timestamp' }),
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
+
+// 限流计数（固定窗口），key = "<规则名>:<哈希后的主体>"，reset_at 为毫秒时间戳
+export const rateLimits = sqliteTable('xhs_rate_limits', {
+  key: text('key').primaryKey(),
+  count: integer('count').notNull().default(0),
+  resetAt: integer('reset_at').notNull(),
+});

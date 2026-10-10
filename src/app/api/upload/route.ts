@@ -1,8 +1,10 @@
 import { NextResponse } from 'next/server';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
+import { AuthTokenError, authErrorResponse, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
 import { resizeForMobileHighQuality } from '@/lib/image-processing';
 import { isCloudinaryConfigured, uploadImageToCloudinary } from '@/lib/cloudinary';
 import { mkdir, writeFile } from 'node:fs/promises';
+import { isLocalUploadFallbackAllowed } from '@/lib/image-refs';
+import { RATE_LIMITS, rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import path from 'node:path';
 
 export const runtime = 'nodejs';
@@ -24,6 +26,11 @@ export async function POST(request: Request) {
 
     if (uid !== userId) {
       return NextResponse.json({ error: 'Forbidden userId' }, { status: 403 });
+    }
+
+    const limit = await rateLimit(uid, RATE_LIMITS.upload());
+    if (!limit.allowed) {
+      return rateLimitResponse(limit);
     }
 
     if (!ALLOWED_MIME_TYPES.has(file.type)) {
@@ -52,6 +59,11 @@ export async function POST(request: Request) {
       }
     }
 
+    if (!isLocalUploadFallbackAllowed()) {
+      // 生产环境（Vercel）文件系统是只读/临时的，写本地会丢图，所以直接报错。
+      return NextResponse.json({ error: '图片上传服务暂不可用，请稍后重试' }, { status: 503 });
+    }
+
     const uploadsDir = path.join(process.cwd(), 'public', 'images', 'uploads');
     await mkdir(uploadsDir, { recursive: true });
 
@@ -66,7 +78,7 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Upload failed:', error);

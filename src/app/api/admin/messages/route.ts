@@ -2,45 +2,27 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { userMessages, users } from '@/db/schema';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
-import { isAdminUser } from '@/lib/user-access';
+import { AuthTokenError, authErrorResponse } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/user-access';
+import { adminMessageSchema, parseJsonBody } from '@/lib/validation';
+import { RATE_LIMITS, rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 
 export const runtime = 'nodejs';
 
-type SendMessageBody = {
-  toUserId?: unknown;
-  title?: unknown;
-  content?: unknown;
-};
-
-function normalizeString(value: unknown): string {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
 export async function POST(request: Request) {
   try {
-    const uid = await verifyFirebaseTokenFromRequest(request);
+    const uid = await requireAdmin(request);
 
-    if (!(await isAdminUser(uid))) {
-      return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
+    const limit = await rateLimit(uid, RATE_LIMITS.adminMessage());
+    if (!limit.allowed) {
+      return rateLimitResponse(limit);
     }
 
-    const body = (await request.json()) as SendMessageBody;
-    const toUserId = normalizeString(body.toUserId);
-    const title = normalizeString(body.title);
-    const content = normalizeString(body.content);
-
-    if (!toUserId || !title || !content) {
-      return NextResponse.json({ error: 'Missing required fields: toUserId, title, content' }, { status: 400 });
+    const parsed = await parseJsonBody(request, adminMessageSchema);
+    if (!parsed.ok) {
+      return parsed.response;
     }
-
-    if (title.length > 120) {
-      return NextResponse.json({ error: 'title is too long' }, { status: 400 });
-    }
-
-    if (content.length > 2000) {
-      return NextResponse.json({ error: 'content is too long' }, { status: 400 });
-    }
+    const { toUserId, title, content } = parsed.data;
 
     const targetUser = await db
       .select({ id: users.id })
@@ -65,7 +47,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: true, message: inserted[0] });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to send admin message:', error);

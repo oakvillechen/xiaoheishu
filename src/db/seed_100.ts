@@ -1,8 +1,11 @@
+import { assertDangerousScriptAllowed } from '../lib/db-script-guard';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema';
 import { users, posts, comments } from './schema';
 import 'dotenv/config';
+
+assertDangerousScriptAllowed('seed_100', process.env.DATABASE_URL);
 
 const client = createClient({
   url: process.env.DATABASE_URL!,

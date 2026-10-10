@@ -1,3 +1,4 @@
+import { assertDangerousScriptAllowed } from '../lib/db-script-guard';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from './schema';
@@ -11,6 +12,8 @@ const url = envConfig?.DATABASE_URL || process.env.DATABASE_URL!;
 const authToken = envConfig?.DATABASE_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN!;
 
 console.log('--- SEED DB CONNECTED TO:', url);
+
+assertDangerousScriptAllowed('seed_100_unique', url);
 
 const client = createClient({ url, authToken });
 const db = drizzle(client, { schema });

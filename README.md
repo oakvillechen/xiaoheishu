@@ -69,14 +69,23 @@ Required JSON body fields:
 - `content`
 - `username` (custom display name)
 
+Optional: bind a key to a fixed author so the body `username` is ignored (prevents impersonation if a key leaks):
+
+```env
+AGENT_PUBLISH_KEY_AUTHORS=key_for_agent_a:DreamHomeGTA,key_for_ci:CI Bot
+# or JSON: {"key_for_agent_a":"DreamHomeGTA"}
+AGENT_PUBLISH_REQUIRE_KEY_AUTHOR=true   # optional: reject keys without a bound author
+```
+
+Image refs must be your Cloudinary URLs (upload first via `POST /api/agent/upload`), site paths like `/images/...`, or hosts listed in `ALLOWED_IMAGE_HOSTS`. See `docs/posting-api.md` for rate limits and the restricted `API_BOT_SECRET` mode.
+
 Optional JSON body fields:
 
 - `link`
 - `images` (string array, max 9)
 - `images` supports:
-	- local path, e.g. `/images/uploads/abc.jpg`
-	- external URL, e.g. `https://cdn.example.com/a.jpg`
-	- Google Drive fileId (for backward compatibility)
+	- your Cloudinary URL, e.g. `https://res.cloudinary.com/<cloud>/image/upload/...`
+	- site path, e.g. `/images/uploads/abc.jpg`
 - `city`
 - `tags`
 - `category`
@@ -95,8 +104,7 @@ curl -X POST http://localhost:3000/api/agent/publish \
 		"tags": "immigration,study",
 		"category": "Life",
 		"images": [
-			"/images/uploads/local-photo.jpg",
-			"https://images.example.com/cover.jpg"
+			"https://res.cloudinary.com/<cloud>/image/upload/v1/cover.jpg"
 		]
 	}'
 ```
@@ -111,8 +119,8 @@ curl -X POST http://localhost:3000/api/agent/publish \
 	- Allows user to customize profile fields:
 	- `displayName`
 	- `photoURL`
-	- `email`
 	- `phoneNumber`
+	- (`email` can no longer be changed here; it comes from the login account)
 	- `city`
 
 Example:
@@ -123,7 +131,6 @@ curl -X PATCH http://localhost:3000/api/users/me \
 	-H "Authorization: Bearer <firebase-id-token>" \
 	-d '{
 		"photoURL": "https://cdn.example.com/avatar.jpg",
-		"email": "user@example.com",
 		"phoneNumber": "+1-647-555-0000",
 		"city": "Toronto"
 	}'
