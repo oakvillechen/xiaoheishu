@@ -2,18 +2,14 @@ import { NextResponse } from 'next/server';
 import { desc } from 'drizzle-orm';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
-import { isAdminUser } from '@/lib/user-access';
+import { AuthTokenError, authErrorResponse } from '@/lib/firebase-admin';
+import { requireAdmin } from '@/lib/user-access';
 
 export const runtime = 'nodejs';
 
 export async function GET(request: Request) {
   try {
-    const uid = await verifyFirebaseTokenFromRequest(request);
-
-    if (!(await isAdminUser(uid))) {
-      return NextResponse.json({ error: 'Admin permission required' }, { status: 403 });
-    }
+    await requireAdmin(request);
 
     const rows = await db
       .select({
@@ -32,7 +28,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ users: rows });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to fetch users:', error);

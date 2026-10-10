@@ -1,3 +1,4 @@
+import { assertDangerousScriptAllowed } from '../src/lib/db-script-guard';
 import { createClient } from '@libsql/client';
 import { drizzle } from 'drizzle-orm/libsql';
 import * as schema from '../src/db/schema';
@@ -11,6 +12,8 @@ import { eq } from 'drizzle-orm';
 const envConfig = config({ path: path.join(process.cwd(), '.env') }).parsed;
 const url = envConfig?.DATABASE_URL || process.env.DATABASE_URL!;
 const authToken = envConfig?.DATABASE_AUTH_TOKEN || process.env.DATABASE_AUTH_TOKEN!;
+
+assertDangerousScriptAllowed('fix-images', url);
 
 const client = createClient({ url, authToken });
 const db = drizzle(client, { schema });

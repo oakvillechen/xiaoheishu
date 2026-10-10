@@ -2,7 +2,7 @@ import { NextResponse } from 'next/server';
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { AuthTokenError, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
+import { AuthTokenError, authErrorResponse, verifyFirebaseTokenFromRequest } from '@/lib/firebase-admin';
 
 export const runtime = 'nodejs';
 
@@ -31,10 +31,6 @@ function normalizeOptionalString(value: unknown): string | null | undefined {
   return normalized.length > 0 ? normalized : null;
 }
 
-function isValidEmail(value: string): boolean {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value);
-}
-
 export async function GET(request: Request) {
   try {
     const uid = await verifyFirebaseTokenFromRequest(request);
@@ -61,7 +57,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ user: rows[0] });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to get profile:', error);
@@ -76,7 +72,6 @@ export async function PATCH(request: Request) {
 
     const displayName = normalizeOptionalString(body.displayName);
     const photoURL = normalizeOptionalString(body.photoURL);
-    const email = normalizeOptionalString(body.email);
     const phoneNumber = normalizeOptionalString(body.phoneNumber);
     const city = normalizeOptionalString(body.city);
 
@@ -88,11 +83,9 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'photoURL is too long' }, { status: 400 });
     }
 
-    if (email !== undefined) {
-      if (email === null || !isValidEmail(email)) {
-        return NextResponse.json({ error: 'Invalid email' }, { status: 400 });
-      }
-    }
+    // 邮箱以 Firebase 登录账号为准，不允许通过此接口修改（防止冒用管理员邮箱等）。
+    // 为兼容旧调用方，传了 email 不报错，只是忽略，并在响应里注明。
+    const ignoredFields = body.email !== undefined ? ['email'] : [];
 
     if (phoneNumber !== undefined && phoneNumber !== null && phoneNumber.length > 30) {
       return NextResponse.json({ error: 'phoneNumber is too long' }, { status: 400 });
@@ -105,12 +98,11 @@ export async function PATCH(request: Request) {
     const updatePayload: Record<string, string | null> = {};
     if (displayName !== undefined) updatePayload.displayName = displayName;
     if (photoURL !== undefined) updatePayload.photoURL = photoURL;
-    if (email !== undefined) updatePayload.email = email;
     if (phoneNumber !== undefined) updatePayload.phoneNumber = phoneNumber;
     if (city !== undefined) updatePayload.city = city;
 
     if (Object.keys(updatePayload).length === 0) {
-      return NextResponse.json({ error: 'No profile fields to update' }, { status: 400 });
+      return NextResponse.json({ error: 'No profile fields to update', ignoredFields }, { status: 400 });
     }
 
     const updated = await db
@@ -131,10 +123,10 @@ export async function PATCH(request: Request) {
       return NextResponse.json({ error: 'User not found' }, { status: 404 });
     }
 
-    return NextResponse.json({ ok: true, user: updated[0] });
+    return NextResponse.json({ ok: true, user: updated[0], ignoredFields });
   } catch (error) {
     if (error instanceof AuthTokenError) {
-      return NextResponse.json({ error: error.message }, { status: 401 });
+      return authErrorResponse(error);
     }
 
     console.error('Failed to update profile:', error);
