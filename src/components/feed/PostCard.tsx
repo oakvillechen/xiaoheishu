@@ -3,8 +3,9 @@
 import { useState } from 'react';
 import { Heart, Share2, MapPin, Images, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
+import { displayCityName } from '@/lib/constants/cities';
 
-interface PostCardProps {
+export interface PostCardProps {
   post: {
     id: number;
     title: string;
@@ -13,7 +14,7 @@ interface PostCardProps {
     link?: string | null;
     city?: string | null;
     tags?: string | null;
-    userName?: string;
+    userName?: string | null;
     userImage?: string | null;
   };
 }
@@ -71,7 +72,7 @@ export default function PostCard({ post }: PostCardProps) {
         <div className="absolute left-3 top-3 flex gap-2">
           {post.city && (
             <span className="bg-black/40 backdrop-blur-md text-white text-[10px] px-2 py-1 rounded-full flex items-center gap-1">
-              <MapPin className="h-3 w-3" /> {post.city}
+              <MapPin className="h-3 w-3" /> {displayCityName(post.city)}
             </span>
           )}
         </div>

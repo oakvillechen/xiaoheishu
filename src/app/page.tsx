@@ -2,36 +2,65 @@
 
 import Header from '@/components/layout/Header';
 import Feed from '@/components/feed/Feed';
-import { useQuery } from '@tanstack/react-query';
-import { useEffect, useMemo, useState } from 'react';
+import { useInfiniteQuery } from '@tanstack/react-query';
+import { useCallback, useEffect, useMemo, useState } from 'react';
 import { ArrowUp, Loader2, RefreshCw } from 'lucide-react';
 
-import { CITY_MAP, SUPPORTED_CITIES_CN } from '@/lib/constants/cities';
+import { CITIES } from '@/lib/constants/cities';
+import { CATEGORIES } from '@/lib/constants/categories';
+import type { PostCardProps } from '@/components/feed/PostCard';
+
+type FeedPage = {
+  items: PostCardProps['post'][];
+  nextCursor: string | null;
+};
+
+const PAGE_SIZE = 20;
+const ALL = '';
 
 export default function Home() {
-  const [activeCategory, setActiveCategory] = useState('全部');
+  const [activeCategory, setActiveCategory] = useState<string>(ALL);
+  const [activeCity, setActiveCity] = useState<string>(ALL);
   const [onlyImagePosts, setOnlyImagePosts] = useState(false);
   const [showBackToTop, setShowBackToTop] = useState(false);
 
-  const catMap: Record<string, string> = {
-    '职场就业': 'Job',
-    '留学移民': 'Immigration',
-    '吃喝玩乐': 'Life',
-  };
+  const categoryTabs = useMemo(() => [{ en: ALL, cn: '全部' }, ...CATEGORIES], []);
+  const cityTabs = useMemo(() => [{ en: ALL, cn: '全部城市', featured: false }, ...CITIES], []);
 
-  const categories = [
-    '全部', '职场就业', '留学移民', '吃喝玩乐',
-    ...SUPPORTED_CITIES_CN
-  ];
+  const {
+    data,
+    isLoading,
+    isFetching,
+    isFetchingNextPage,
+    hasNextPage,
+    fetchNextPage,
+    refetch,
+  } = useInfiniteQuery({
+    queryKey: ['posts', 'feed', activeCategory, activeCity, onlyImagePosts],
+    initialPageParam: null as string | null,
+    queryFn: async ({ pageParam }): Promise<FeedPage> => {
+      const params = new URLSearchParams({ limit: String(PAGE_SIZE) });
+      if (pageParam) params.set('cursor', pageParam);
+      if (activeCategory) params.set('category', activeCategory);
+      if (activeCity) params.set('city', activeCity);
+      if (onlyImagePosts) params.set('hasImage', '1');
 
-  const { data: allPosts, isLoading, isFetching, refetch } = useQuery({
-    queryKey: ['posts'],
-    queryFn: async () => {
-      const res = await fetch('/api/posts');
-      if (!res.ok) return [];
+      const res = await fetch(`/api/posts?${params.toString()}`);
+      if (!res.ok) {
+        return { items: [], nextCursor: null };
+      }
       return res.json();
-    }
+    },
+    getNextPageParam: (lastPage) => lastPage.nextCursor,
   });
+
+  const feedPosts = useMemo(() => data?.pages.flatMap((page) => page.items) ?? [], [data]);
+
+  const handleLoadMore = useCallback(() => {
+    if (hasNextPage && !isFetchingNextPage) {
+      void fetchNextPage();
+    }
+  }, [fetchNextPage, hasNextPage, isFetchingNextPage]);
 
   useEffect(() => {
     const onScroll = () => {
@@ -42,35 +71,6 @@ export default function Home() {
     window.addEventListener('scroll', onScroll);
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
-
-  const filteredPosts = useMemo(() => {
-    const source = Array.isArray(allPosts) ? allPosts : [];
-
-    return source.filter((post: any) => {
-      const inCategory = (() => {
-        if (activeCategory === '全部') return true;
-        if (CITY_MAP[activeCategory]) {
-          return post.city === CITY_MAP[activeCategory];
-        }
-        if (catMap[activeCategory]) {
-          return post.category === catMap[activeCategory];
-        }
-        return false;
-      })();
-
-      if (!inCategory) {
-        return false;
-      }
-
-      if (!onlyImagePosts) {
-        return true;
-      }
-
-      const hasImage = Array.isArray(post.imageUrls) && post.imageUrls.length > 0;
-      const hasContent = typeof post.content === 'string' && post.content.trim().length > 0;
-      return hasImage && hasContent;
-    });
-  }, [activeCategory, allPosts, onlyImagePosts]);
 
   const handleRefresh = async () => {
     await refetch();
@@ -85,25 +85,47 @@ export default function Home() {
       <Header />
 
       <section className="sticky top-16 z-40 border-b border-slate-200 bg-white/96 backdrop-blur-md">
-        <div className="mx-auto flex h-16 w-full max-w-[1360px] items-center gap-3 px-4">
-          <div className="flex-1 overflow-x-auto scrollbar-hide">
-            <div suppressHydrationWarning className="flex h-16 items-center gap-6">
-              {categories.map((cat) => (
+        <div className="mx-auto w-full max-w-[1360px] px-4">
+          <div className="overflow-x-auto scrollbar-hide">
+            <div suppressHydrationWarning className="flex h-12 items-center gap-6">
+              {categoryTabs.map((cat) => (
                 <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
+                  key={cat.en || 'all'}
+                  onClick={() => setActiveCategory(cat.en)}
                   className={`relative whitespace-nowrap text-[14px] transition-colors ${
-                    activeCategory === cat
+                    activeCategory === cat.en
                       ? 'font-bold text-slate-900'
                       : 'font-medium text-slate-500 hover:text-slate-900'
                   }`}
                 >
-                  {cat}
-                  {activeCategory === cat && (
+                  {cat.cn}
+                  {activeCategory === cat.en && (
                     <span className="absolute -bottom-2 left-0 h-0.5 w-full rounded-full bg-slate-900" />
                   )}
                 </button>
               ))}
+            </div>
+          </div>
+          <div className="overflow-x-auto scrollbar-hide">
+            <div className="flex h-10 items-center gap-2 pb-1">
+              {cityTabs.map((city) => {
+                const active = activeCity === city.en;
+                return (
+                  <button
+                    key={city.en || 'all-cities'}
+                    onClick={() => setActiveCity(city.en)}
+                    className={`whitespace-nowrap rounded-full px-3 py-1 text-[12px] transition-colors ${
+                      active
+                        ? 'bg-rose-500 font-semibold text-white'
+                        : city.featured
+                          ? 'bg-rose-50 font-medium text-rose-600 hover:bg-rose-100'
+                          : 'bg-slate-100 font-medium text-slate-600 hover:bg-slate-200'
+                    }`}
+                  >
+                    {city.cn}
+                  </button>
+                );
+              })}
             </div>
           </div>
         </div>
@@ -114,7 +136,12 @@ export default function Home() {
           <Loader2 className="h-8 w-8 animate-spin text-rose-500" />
         </div>
       ) : (
-        <Feed posts={filteredPosts} />
+        <Feed
+          posts={feedPosts}
+          hasMore={!!hasNextPage}
+          isLoadingMore={isFetchingNextPage}
+          onLoadMore={handleLoadMore}
+        />
       )}
 
       <div className="fixed bottom-6 right-6 z-50 flex flex-col gap-2">

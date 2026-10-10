@@ -1,25 +1,20 @@
 'use client';
 
-import { useEffect, useMemo, useRef, useState } from 'react';
-import PostCard from './PostCard';
+import { useEffect, useRef } from 'react';
+import PostCard, { type PostCardProps } from './PostCard';
 
-const INITIAL_BATCH_SIZE = 20;
-const LOAD_MORE_BATCH_SIZE = 12;
+type FeedProps = {
+  posts: PostCardProps['post'][];
+  hasMore?: boolean;
+  isLoadingMore?: boolean;
+  onLoadMore?: () => void;
+};
 
-export default function Feed({ posts }: { posts: any[] }) {
-  const [visibleCount, setVisibleCount] = useState(INITIAL_BATCH_SIZE);
-  const [isLoadingMore, setIsLoadingMore] = useState(false);
+export default function Feed({ posts, hasMore = false, isLoadingMore = false, onLoadMore }: FeedProps) {
   const loaderRef = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
-    setVisibleCount(INITIAL_BATCH_SIZE);
-  }, [posts]);
-
-  const visiblePosts = useMemo(() => posts.slice(0, visibleCount), [posts, visibleCount]);
-  const hasMore = visibleCount < posts.length;
-
-  useEffect(() => {
-    if (!hasMore) {
+    if (!hasMore || !onLoadMore) {
       return;
     }
 
@@ -31,30 +26,16 @@ export default function Feed({ posts }: { posts: any[] }) {
     const observer = new IntersectionObserver(
       (entries) => {
         const [entry] = entries;
-        if (!entry?.isIntersecting || isLoadingMore) {
-          return;
+        if (entry?.isIntersecting && !isLoadingMore) {
+          onLoadMore();
         }
-
-        setIsLoadingMore(true);
-        setVisibleCount((prev) => Math.min(prev + LOAD_MORE_BATCH_SIZE, posts.length));
       },
-      {
-        rootMargin: '180px 0px',
-      },
+      { rootMargin: '400px 0px' },
     );
 
     observer.observe(loader);
-
-    return () => {
-      observer.disconnect();
-    };
-  }, [hasMore, isLoadingMore, posts.length]);
-
-  useEffect(() => {
-    if (isLoadingMore) {
-      setIsLoadingMore(false);
-    }
-  }, [visibleCount, isLoadingMore]);
+    return () => observer.disconnect();
+  }, [hasMore, isLoadingMore, onLoadMore]);
 
   if (!posts || posts.length === 0) {
     return (
@@ -67,7 +48,7 @@ export default function Feed({ posts }: { posts: any[] }) {
   return (
     <div className="mx-auto w-full max-w-[1360px] px-4 py-4">
       <div className="grid grid-cols-2 gap-x-3 gap-y-4 lg:grid-cols-[repeat(4,minmax(0,320px))] lg:justify-center">
-        {visiblePosts.map((post) => (
+        {posts.map((post) => (
           <PostCard key={post.id} post={post} />
         ))}
       </div>
@@ -76,6 +57,10 @@ export default function Feed({ posts }: { posts: any[] }) {
 
       {isLoadingMore && (
         <div className="py-3 text-center text-xs text-slate-400">正在加载更多...</div>
+      )}
+
+      {!hasMore && posts.length > 0 && (
+        <div className="py-6 text-center text-xs text-slate-300">— 到底啦 —</div>
       )}
     </div>
   );

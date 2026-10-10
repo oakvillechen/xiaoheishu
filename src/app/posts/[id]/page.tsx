@@ -8,6 +8,7 @@ import { Loader2, MessageCircle, Heart, Share2, MapPin, Calendar, Send, ChevronL
 import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import { use } from 'react';
+import { displayCityName } from '@/lib/constants/cities';
 
 export default function PostDetail({ params: paramsPromise }: { params: Promise<{ id: string }> }) {
   const params = use(paramsPromise);
@@ -237,7 +238,7 @@ export default function PostDetail({ params: paramsPromise }: { params: Promise<
                 {post?.city && (
                   <span className="inline-flex items-center gap-1">
                     <MapPin className="h-3.5 w-3.5" />
-                    {post.city}
+                    {displayCityName(post.city)}
                   </span>
                 )}
                 <span className="inline-flex items-center gap-1">

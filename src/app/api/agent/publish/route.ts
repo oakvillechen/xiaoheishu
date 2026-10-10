@@ -5,6 +5,7 @@ import { db } from '@/db';
 import { posts, users } from '@/db/schema';
 import { authenticateAgentRequest } from '@/lib/agent-auth';
 import { normalizeCityName } from '@/lib/constants/cities';
+import { normalizeCategory } from '@/lib/constants/categories';
 import { RATE_LIMITS, rateLimit, rateLimitResponse } from '@/lib/rate-limit';
 import { agentPublishSchema, parseJsonBody } from '@/lib/validation';
 
@@ -76,7 +77,7 @@ export async function POST(request: Request) {
         userId,
         city: normalizeCityName(body.city),
         tags: body.tags,
-        category: body.category,
+        category: normalizeCategory(body.category),
       })
       .returning();
 
