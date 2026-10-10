@@ -132,7 +132,7 @@ AGENT_PUBLISH_RATE_LIMIT_WINDOW_SEC=60
 示例：
 
 ```http
-x-api-key: FxjxWIPkzj1fGaaZFKcKi-xoVDTiaYNojM290mgLj9JuJi3u4hjF4uhSAjjMlSuW
+x-api-key: FxjxWIPkzj1fGaaZFKcKi-xoVDTu4hjF4uhSAjjMlSuW
 ```
 
 ### 2.4 请求体
@@ -205,7 +205,7 @@ x-api-key: FxjxWIPkzj1fGaaZFKcKi-xoVDTiaYNojM290mgLj9JuJi3u4hjF4uhSAjjMlSuW
 ```bash
 curl -X POST https://xiaoheishu.ca/api/agent/publish \
   -H "Content-Type: application/json" \
-  -H "x-api-key: FxjxWIPkzj1fGaaZFKcKi-xoVDTiaYNojM290mgLj9JuJi3u4hjF4uhSAjjMlSuW" \
+  -H "x-api-key: FxjxWIPkzj1fGaaZFKcKjF4uhSAjjMlSuW" \
   -d '{
     "title": "标题",
     "content": "正文内容",
@@ -218,7 +218,7 @@ curl -X POST https://xiaoheishu.ca/api/agent/publish \
 ```bash
 curl -X POST https://xiaoheishu.ca/api/agent/publish \
   -H "Content-Type: application/json" \
-  -H "x-api-key: FxjxWIPkzj1fGaaZFKcKi-xoVDTiaYNojM290mgLj9JuJi3u4hjF4uhSAjjMlSuW" \
+  -H "x-api-key: FxjxWIPkzj1fGaaZFKcKjF4uhSAjjMlSuW" \
   -d '{
     "title": "春天的花朵",
     "content": "正文内容",
