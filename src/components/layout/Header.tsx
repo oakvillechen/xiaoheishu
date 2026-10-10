@@ -3,7 +3,7 @@
 import { useEffect, useState } from 'react';
 import { useAuth } from '@/context/AuthContext';
 import { Button } from '@/components/ui/button';
-import { LogIn, LogOut, ShieldCheck } from 'lucide-react';
+import { LogIn, LogOut, ShieldCheck, Star } from 'lucide-react';
 import Link from 'next/link';
 import CreatePostModal from '@/components/feed/CreatePostModal';
 import axios from 'axios';
@@ -88,6 +88,12 @@ export default function Header() {
                    {user.displayName || '我的'}
                  </span>
               </div>
+              <Link href="/me/favorites" aria-label="我的收藏" title="我的收藏">
+                <Button variant="ghost" size="sm" className="rounded-full text-slate-600">
+                  <Star className="h-4 w-4 sm:mr-1" />
+                  <span className="hidden sm:inline">我的收藏</span>
+                </Button>
+              </Link>
               {isAdmin && (
                 <Link href="/admin">
                   <Button variant="outline" size="sm" className="rounded-full">

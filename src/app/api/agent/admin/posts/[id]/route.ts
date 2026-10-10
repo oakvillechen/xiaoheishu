@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { count, eq } from 'drizzle-orm';
 import { revalidatePath } from 'next/cache';
+import { deleteReactionsForPost } from '@/lib/reactions';
 import { db } from '@/db';
 import { adminAuditLog, comments, posts } from '@/db/schema';
 import { authenticateAgentAdmin } from '@/lib/agent-admin-auth';
@@ -179,6 +180,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       if (commentCount > 0) {
         await db.delete(comments).where(eq(comments.postId, g.postId));
       }
+      await deleteReactionsForPost(g.postId);
       await db.delete(posts).where(eq(posts.id, g.postId));
       revalidatePath('/');
       revalidatePath(`/posts/${g.postId}`);

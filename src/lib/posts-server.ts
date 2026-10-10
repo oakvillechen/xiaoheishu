@@ -5,6 +5,7 @@ import { comments, posts, users } from '@/db/schema';
 import { getImageDisplayUrl } from '@/lib/google-drive';
 import { cityMatchValues } from '@/lib/constants/cities';
 import { categoryMatchValues } from '@/lib/constants/categories';
+import { getCounts } from '@/lib/reactions';
 
 export function parseImageIds(images: string | null): string[] {
   if (!images) return [];
@@ -72,7 +73,15 @@ export const getPostDetail = cache(async (postId: number) => {
     .where(eq(comments.postId, postId))
     .orderBy(desc(comments.createdAt));
 
-  return { post: withImages(rows[0]), comments: postComments };
+  const [likeCounts, favoriteCounts] = await Promise.all([getCounts('like', [postId]), getCounts('favorite', [postId])]);
+  return {
+    post: {
+      ...withImages(rows[0]),
+      likeCount: likeCounts.counts.get(postId) ?? 0,
+      favoriteCount: favoriteCounts.counts.get(postId) ?? 0,
+    },
+    comments: postComments,
+  };
 });
 
 export type PostDetail = NonNullable<Awaited<ReturnType<typeof getPostDetail>>>;
@@ -99,7 +108,7 @@ export async function listLatestPosts(opts: { city?: string; category?: string; 
     hasMore && last
       ? Buffer.from(`${last.createdAt ? Math.floor(last.createdAt.getTime() / 1000) : 0}:${last.id}`).toString('base64url')
       : null;
-  return { items: page.map(withImages), nextCursor };
+  return { items: await withLikeCounts(page.map(withImages)), nextCursor };
 }
 
 /** sitemap 用：所有帖子 id + 时间 */
@@ -109,4 +118,22 @@ export async function listPostIdsForSitemap() {
     .from(posts)
     .orderBy(desc(createdAtKey), desc(posts.id))
     .limit(45000);
+}
+
+/** 给帖子列表补上点赞数 likeCount（一次批量查询；点赞表不存在时为 0） */
+export async function withLikeCounts<T extends { id: number }>(items: T[]): Promise<(T & { likeCount: number })[]> {
+  const { counts } = await getCounts('like', items.map((p) => p.id));
+  return items.map((p) => ({ ...p, likeCount: counts.get(p.id) ?? 0 }));
+}
+
+/** 按给定 id 顺序取帖子（已删除的帖子会被跳过） */
+export async function getPostsByIds(ids: number[]) {
+  if (ids.length === 0) return [];
+  const rows = await db
+    .select(postSelection)
+    .from(posts)
+    .leftJoin(users, eq(posts.userId, users.id))
+    .where(inArray(posts.id, ids));
+  const byId = new Map(rows.map((r) => [r.id, withImages(r)]));
+  return ids.map((id) => byId.get(id)).filter((p): p is NonNullable<typeof p> => Boolean(p));
 }

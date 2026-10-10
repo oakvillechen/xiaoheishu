@@ -1,9 +1,10 @@
 'use client';
 
 import { useState } from 'react';
-import { Heart, Share2, MapPin, Images, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Share2, MapPin, Images, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { displayCityName } from '@/lib/constants/cities';
+import ReactionButton from '@/components/post/ReactionButton';
 
 export interface PostCardProps {
   post: {
@@ -16,6 +17,7 @@ export interface PostCardProps {
     tags?: string | null;
     userName?: string | null;
     userImage?: string | null;
+    likeCount?: number;
   };
 }
 
@@ -128,10 +130,7 @@ export default function PostCard({ post }: PostCardProps) {
             </span>
           </div>
 
-          <div className="flex items-center gap-1 text-slate-400">
-            <Heart className="h-4 w-4" />
-            <span className="text-[11px] font-medium">128</span>
-          </div>
+          <ReactionButton kind="like" postId={post.id} initialCount={post.likeCount ?? 0} variant="card" />
         </div>
       </div>
 

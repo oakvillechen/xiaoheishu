@@ -1,4 +1,4 @@
-import { sqliteTable, text, integer } from 'drizzle-orm/sqlite-core';
+import { sqliteTable, text, integer, primaryKey, index } from 'drizzle-orm/sqlite-core';
 
 export const users = sqliteTable('xhs_users', {
   id: text('id').primaryKey(), // Firebase UID
@@ -61,3 +61,29 @@ export const adminAuditLog = sqliteTable('xhs_admin_audit_log', {
   after: text('after'), // JSON
   createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
 });
+
+// 点赞：每个用户对每篇帖子最多一条（复合主键保证唯一，重复点赞是幂等的）
+export const likes = sqliteTable(
+  'xhs_likes',
+  {
+    userId: text('user_id').notNull(),
+    postId: integer('post_id').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  },
+  (t) => [primaryKey({ columns: [t.userId, t.postId] }), index('xhs_likes_post_idx').on(t.postId)],
+);
+
+// 收藏：同上；(user_id, created_at) 索引用于「我的收藏」按时间倒序分页
+export const favorites = sqliteTable(
+  'xhs_favorites',
+  {
+    userId: text('user_id').notNull(),
+    postId: integer('post_id').notNull(),
+    createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+  },
+  (t) => [
+    primaryKey({ columns: [t.userId, t.postId] }),
+    index('xhs_favorites_post_idx').on(t.postId),
+    index('xhs_favorites_user_created_idx').on(t.userId, t.createdAt),
+  ],
+);

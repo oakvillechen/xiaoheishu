@@ -100,11 +100,11 @@ export default async function PostPage({ params }: Props) {
     keywords: post.tags || undefined,
     contentLocation: city ? { '@type': 'Place', name: `${displayCityName(city)} ${city}` } : undefined,
     commentCount: comments.length,
-    interactionStatistic: {
-      '@type': 'InteractionCounter',
-      interactionType: 'https://schema.org/CommentAction',
-      userInteractionCount: comments.length,
-    },
+    interactionStatistic: [
+      { '@type': 'InteractionCounter', interactionType: 'https://schema.org/CommentAction', userInteractionCount: comments.length },
+      { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: post.likeCount },
+      { '@type': 'InteractionCounter', interactionType: 'https://schema.org/BookmarkAction', userInteractionCount: post.favoriteCount },
+    ],
   };
 
   const breadcrumb = {
