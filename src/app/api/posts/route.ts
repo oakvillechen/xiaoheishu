@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { withLikeCounts } from '@/lib/posts-server';
+import { decoratePosts } from '@/lib/posts-server';
 import { db } from '@/db';
 import { posts, users } from '@/db/schema';
 import { and, desc, eq, inArray, sql, type SQL } from 'drizzle-orm';
@@ -82,6 +82,7 @@ const postSelection = {
   city: posts.city,
   tags: posts.tags,
   category: posts.category,
+  userId: posts.userId,
   userName: users.displayName,
   userImage: users.photoURL,
   createdAt: posts.createdAt,
@@ -130,7 +131,7 @@ export async function GET(req: Request) {
         .leftJoin(users, eq(posts.userId, users.id))
         .orderBy(desc(posts.createdAt));
 
-      return NextResponse.json(await withLikeCounts(allPosts.map(toResponsePost)));
+      return NextResponse.json(await decoratePosts(allPosts.map(toResponsePost)));
     }
 
     const limitParam = Number.parseInt(params.get('limit') || '', 10);
@@ -195,7 +196,7 @@ export async function GET(req: Request) {
           })
         : null;
 
-    return NextResponse.json({ items: await withLikeCounts(pageRows.map(toResponsePost)), nextCursor });
+    return NextResponse.json({ items: await decoratePosts(pageRows.map(toResponsePost)), nextCursor });
   } catch (error) {
     console.error('Error fetching posts:', error);
     return NextResponse.json({ error: 'Failed to fetch posts' }, { status: 500 });
@@ -242,6 +243,7 @@ export async function POST(req: Request) {
     }).returning();
 
     revalidatePath('/');
+    revalidatePath(`/u/${encodeURIComponent(userId)}`);
     return NextResponse.json(newPost);
   } catch (error) {
     if (error instanceof AuthTokenError) {

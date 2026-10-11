@@ -1,11 +1,13 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useEffect, useMemo, useRef } from 'react';
 import axios from 'axios';
 import { useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '@/context/AuthContext';
 import { reactionKey, type ReactionData } from '@/hooks/useReaction';
 import PostCard, { type PostCardProps } from './PostCard';
+import { distributeColumns } from './masonry';
+import { useColumnCount } from './useColumnCount';
 
 /** 登录用户：批量查询这些卡片里自己点过赞的帖子，写进每张卡片的点赞缓存（一页一个请求） */
 function useBatchLikeStatus(posts: PostCardProps['post'][]) {
@@ -65,6 +67,9 @@ export default function Feed({
 }: FeedProps) {
   const loaderRef = useRef<HTMLDivElement | null>(null);
   useBatchLikeStatus(posts);
+  const columnCount = useColumnCount();
+  const columns = useMemo(() => distributeColumns(posts || [], columnCount), [posts, columnCount]);
+  const order = useMemo(() => new Map((posts || []).map((p, i) => [p.id, i])), [posts]);
 
   useEffect(() => {
     if (!hasMore || !onLoadMore) {
@@ -99,10 +104,15 @@ export default function Feed({
   }
 
   return (
-    <div className="mx-auto w-full max-w-[1360px] px-4 py-4">
-      <div className="grid grid-cols-2 gap-x-3 gap-y-4 lg:grid-cols-[repeat(4,minmax(0,320px))] lg:justify-center">
-        {posts.map((post) => (
-          <PostCard key={post.id} post={post} />
+    <div className="mx-auto w-full max-w-[1360px] px-2.5 py-3 md:px-4 md:py-4">
+      {/* 瀑布流：按列渲染，每列从上往下排；新加载的卡片只会追加到列尾 */}
+      <div className="flex items-start gap-2.5 md:gap-4">
+        {columns.map((column, columnIndex) => (
+          <div key={columnIndex} className="flex min-w-0 flex-1 flex-col gap-2.5 md:gap-4">
+            {column.map((post) => (
+              <PostCard key={post.id} post={post} priority={(order.get(post.id) ?? 99) < columnCount * 2} />
+            ))}
+          </div>
         ))}
       </div>
 

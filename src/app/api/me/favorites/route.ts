@@ -1,7 +1,7 @@
 import { NextResponse } from 'next/server';
 import { AuthTokenError, authErrorResponse, verifyRequestIdentity } from '@/lib/firebase-admin';
 import { decodeFavoriteCursor, listFavoritePostIds } from '@/lib/reactions';
-import { getPostsByIds, withLikeCounts } from '@/lib/posts-server';
+import { getPostsByIds, decoratePosts } from '@/lib/posts-server';
 
 export const dynamic = 'force-dynamic';
 
@@ -22,7 +22,7 @@ export async function GET(request: Request) {
     }
 
     const { postIds, nextCursor, available } = await listFavoritePostIds(uid, limit, cursor);
-    const items = await withLikeCounts(await getPostsByIds(postIds));
+    const items = await decoratePosts(await getPostsByIds(postIds));
     return NextResponse.json({ items, nextCursor, available }, { headers: { 'Cache-Control': 'private, no-store' } });
   } catch (error) {
     if (error instanceof AuthTokenError) return authErrorResponse(error);

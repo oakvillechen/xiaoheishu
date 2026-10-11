@@ -1,4 +1,5 @@
 import { createHash } from 'node:crypto';
+import { recordImageMeta } from '@/lib/image-meta';
 
 type CloudinaryUploadResult = {
   fileId: string;
@@ -86,6 +87,11 @@ export async function uploadImageToCloudinary(
 
   if (!secureUrl) {
     throw new Error('Cloudinary upload missing secure_url');
+  }
+
+  // 记录宽高，瀑布流直接用，不必再查询
+  if (typeof data.width === 'number' && typeof data.height === 'number') {
+    await recordImageMeta(secureUrl, data.width, data.height);
   }
 
   return {

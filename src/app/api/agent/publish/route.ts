@@ -82,6 +82,7 @@ export async function POST(request: Request) {
       .returning();
 
     revalidatePath('/');
+    revalidatePath(`/u/${encodeURIComponent(userId)}`);
 
     return NextResponse.json({
       ok: true,
