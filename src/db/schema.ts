@@ -87,3 +87,19 @@ export const favorites = sqliteTable(
     index('xhs_favorites_user_created_idx').on(t.userId, t.createdAt),
   ],
 );
+
+// 用户资料扩展（个人简介等）。单独建表而不是给 xhs_users 加列：迁移执行前旧表照常可用，网站不会因为缺列报错。
+export const userProfiles = sqliteTable('xhs_user_profiles', {
+  userId: text('user_id').primaryKey(),
+  bio: text('bio'),
+  updatedAt: integer('updated_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});
+
+// 图片尺寸缓存：瀑布流需要提前知道封面宽高，避免图片加载后布局跳动。
+// 上传时直接记录；旧图片在第一次出现在列表里时向 Cloudinary（fl_getinfo）查询一次后写入。
+export const imageMeta = sqliteTable('xhs_image_meta', {
+  url: text('url').primaryKey(),
+  width: integer('width').notNull(),
+  height: integer('height').notNull(),
+  createdAt: integer('created_at', { mode: 'timestamp' }).$defaultFn(() => new Date()),
+});

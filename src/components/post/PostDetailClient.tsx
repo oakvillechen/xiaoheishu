@@ -10,6 +10,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { displayCityName, normalizeCityName, CITIES } from '@/lib/constants/cities';
 import { cityPath } from '@/lib/site';
+import { cloudinaryThumb } from '@/lib/image-url';
 import AdminDeletePostButton from '@/components/post/AdminDeletePostButton';
 import ReactionButton from '@/components/post/ReactionButton';
 
@@ -30,6 +31,7 @@ type PostDetailData = {
     city?: string | null;
     tags?: string | null;
     userName?: string | null;
+    userId?: string | null;
     userImage?: string | null;
     createdAt?: string | null;
     likeCount?: number;
@@ -237,21 +239,32 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
         <aside className="h-full flex-[0_0_35%] overflow-hidden border-l border-slate-100 px-4 py-4 max-lg:border-l-0 max-lg:border-t max-lg:px-3">
           <div className="flex h-full flex-col">
             <div className="mb-4 flex items-center justify-between">
-              <div className="flex min-w-0 items-center gap-3">
-                <div className="h-10 w-10 overflow-hidden rounded-full bg-slate-100">
-                  {post?.userImage ? (
-                    <img src={post.userImage} alt="" className="h-full w-full object-cover" />
-                  ) : (
-                    <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-400">
-                      {post?.userName?.[0] || '匿'}
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0">
-                  <p className="truncate text-[16px] font-semibold text-slate-900">{post?.userName || '匿名用户'}</p>
-                  <p className="text-xs text-slate-400">刚刚</p>
-                </div>
-              </div>
+              {(() => {
+                const author = (
+                  <>
+                    <div className="h-10 w-10 shrink-0 overflow-hidden rounded-full bg-slate-100">
+                      {post?.userImage ? (
+                        <img src={cloudinaryThumb(post.userImage, 96)} alt="" className="h-full w-full object-cover" />
+                      ) : (
+                        <span className="flex h-full w-full items-center justify-center text-sm font-bold text-slate-400">
+                          {post?.userName?.[0] || '匿'}
+                        </span>
+                      )}
+                    </div>
+                    <div className="min-w-0">
+                      <p className="truncate text-[16px] font-semibold text-slate-900">{post?.userName || '匿名用户'}</p>
+                      <p className="text-xs text-slate-400">{formatDate(post?.createdAt)}</p>
+                    </div>
+                  </>
+                );
+                return post?.userId ? (
+                  <Link href={`/u/${encodeURIComponent(post.userId)}`} className="flex min-w-0 items-center gap-3 hover:opacity-80">
+                    {author}
+                  </Link>
+                ) : (
+                  <div className="flex min-w-0 items-center gap-3">{author}</div>
+                );
+              })()}
 
               <button className="h-9 w-20 rounded-full bg-rose-500 text-sm font-semibold text-white hover:bg-rose-600">
                 关注

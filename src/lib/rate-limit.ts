@@ -155,6 +155,11 @@ export const RATE_LIMITS = {
     max: parsePositiveInt(process.env.AGENT_ADMIN_RATE_LIMIT_MAX, 60),
     windowSec: parsePositiveInt(process.env.AGENT_ADMIN_RATE_LIMIT_WINDOW_SEC, 3600),
   }),
+  profile: (): RateLimitRule => ({
+    name: 'profile',
+    max: parsePositiveInt(process.env.RATE_LIMIT_PROFILE_MAX, 20),
+    windowSec: parsePositiveInt(process.env.RATE_LIMIT_PROFILE_WINDOW_SEC, 3600),
+  }),
   reaction: (): RateLimitRule => ({
     name: 'reaction',
     max: parsePositiveInt(process.env.RATE_LIMIT_REACTION_MAX, 60),
