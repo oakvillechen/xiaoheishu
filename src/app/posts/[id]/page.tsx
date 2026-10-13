@@ -32,6 +32,14 @@ function absoluteImage(url: string | undefined) {
   return `${SITE_URL}${url.startsWith('/') ? '' : '/'}${url}`;
 }
 
+function personLd(userId: string | null | undefined, name: string | null | undefined) {
+  return {
+    '@type': 'Person',
+    name: name || '小黑书用户',
+    url: userId ? `${SITE_URL}/u/${encodeURIComponent(userId)}` : `${SITE_URL}/`,
+  };
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { id } = await params;
   const detail = await loadPost(id);
@@ -95,11 +103,19 @@ export default async function PostPage({ params }: Props) {
     inLanguage: 'zh-CN',
     datePublished: post.createdAt ? post.createdAt.toISOString() : undefined,
     image: post.imageUrls.length ? post.imageUrls.map(absoluteImage) : undefined,
-    author: { '@type': 'Person', name: post.userName || '小黑书用户' },
+    author: personLd(post.userId, post.userName),
     publisher: { '@type': 'Organization', name: SITE_NAME, url: SITE_URL, logo: `${SITE_URL}/icons/icon-512.png` },
     keywords: post.tags || undefined,
     contentLocation: city ? { '@type': 'Place', name: `${displayCityName(city)} ${city}` } : undefined,
     commentCount: comments.length,
+    comment: comments.length
+      ? comments.slice(0, 50).map((c) => ({
+          '@type': 'Comment',
+          text: c.content,
+          datePublished: c.createdAt ? new Date(c.createdAt).toISOString() : undefined,
+          author: personLd(c.userId, c.userName),
+        }))
+      : undefined,
     interactionStatistic: [
       { '@type': 'InteractionCounter', interactionType: 'https://schema.org/CommentAction', userInteractionCount: comments.length },
       { '@type': 'InteractionCounter', interactionType: 'https://schema.org/LikeAction', userInteractionCount: post.likeCount },
