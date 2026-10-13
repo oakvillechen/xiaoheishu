@@ -66,6 +66,7 @@ export const getPostDetail = cache(async (postId: number) => {
     .select({
       id: comments.id,
       content: comments.content,
+      userId: comments.userId,
       userName: users.displayName,
       userImage: users.photoURL,
       createdAt: comments.createdAt,
