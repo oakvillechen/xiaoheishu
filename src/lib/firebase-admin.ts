@@ -27,7 +27,7 @@ function secureEqual(a: string, b: string): boolean {
   return left.length === right.length && timingSafeEqual(left, right);
 }
 
-/** API_BOT_USER_ID 对应的用户永远不是管理员（即使在 ADMIN_USER_IDS 或数据库 role=admin 中）。 */
+/** 是否为 API_BOT_USER_ID。注意：管理员降权按认证方式（viaBotSecret）判断，不按 uid。 */
 export function isBotUserId(uid: string): boolean {
   const botUid = String(process.env.API_BOT_USER_ID || '').trim();
   return !!botUid && uid === botUid;

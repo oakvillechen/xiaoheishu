@@ -1,7 +1,7 @@
 import { eq } from 'drizzle-orm';
 import { db } from '@/db';
 import { users } from '@/db/schema';
-import { AuthTokenError, isBotUserId, verifyRequestIdentity } from '@/lib/firebase-admin';
+import { AuthTokenError, verifyRequestIdentity } from '@/lib/firebase-admin';
 
 function parseAdminUserIdsFromEnv(): Set<string> {
   const raw = String(process.env.ADMIN_USER_IDS || '').trim();
@@ -18,9 +18,6 @@ function parseAdminUserIdsFromEnv(): Set<string> {
 }
 
 export function isBootstrapAdminUser(uid: string): boolean {
-  if (isBotUserId(uid)) {
-    return false;
-  }
   return parseAdminUserIdsFromEnv().has(uid);
 }
 
@@ -37,11 +34,8 @@ export async function getUserRole(uid: string): Promise<string | null> {
 }
 
 export async function isAdminUser(uid: string): Promise<boolean> {
-  // 机器人账号（API_BOT_USER_ID）永远不是管理员
-  if (isBotUserId(uid)) {
-    return false;
-  }
-
+  // 注意：不按 uid 拒绝机器人。API_BOT_USER_ID 可能就是站长本人的 uid；
+  // 机器人降权按“认证方式”判断：requireAdmin 拒绝所有 API_BOT_SECRET 请求。
   if (isBootstrapAdminUser(uid)) {
     return true;
   }
