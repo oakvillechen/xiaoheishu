@@ -4,6 +4,7 @@ import { revalidatePath } from 'next/cache';
 import { db } from '@/db';
 import { posts, users } from '@/db/schema';
 import { authenticateAgentRequest } from '@/lib/agent-auth';
+import { isAllowedAgentAuthor } from '@/lib/agent-authors';
 import { normalizeCityName } from '@/lib/constants/cities';
 import { normalizeCategory } from '@/lib/constants/categories';
 import { RATE_LIMITS, rateLimit, rateLimitResponse } from '@/lib/rate-limit';
@@ -39,7 +40,11 @@ export async function POST(request: Request) {
     }
     const body = parsed.data;
 
-    const username = (auth.boundAuthor || body.username || '').trim();
+    const requested = (body.username || '').trim();
+    // 绑定作者的 Key：默认用绑定作者；若请求的是白名单笔名则允许轮换
+    const username = (
+      auth.boundAuthor ? (isAllowedAgentAuthor(requested) ? requested : auth.boundAuthor) : requested
+    ).trim();
     if (!username) {
       return NextResponse.json({ error: 'Missing required fields: title, content, username' }, { status: 400 });
     }
