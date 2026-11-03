@@ -40,7 +40,6 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
   const router = useRouter();
   const images = post.imageUrls || [];
   const cover = images[0];
-  const [isOpening, setIsOpening] = useState(false);
   const [failed, setFailed] = useState(false);
 
   const ratio = cover && !failed ? coverRatio(post.coverWidth, post.coverHeight) : TEXT_ONLY_RATIO;
@@ -54,17 +53,12 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
       return;
     }
     event.preventDefault();
-    if (isOpening) return;
-    setIsOpening(true);
-    window.setTimeout(() => {
-      router.push(`/posts/${post.id}`);
-    }, 250);
+    router.push(`/posts/${post.id}`);
   };
 
   return (
     <article
-      className={`group relative overflow-hidden rounded-xl bg-white transition-transform ${isOpening ? 'z-30 scale-[1.03]' : ''}`}
-      style={{ transitionDuration: '250ms' }}
+      className="group relative overflow-hidden rounded-xl bg-white transition-all duration-150 hover:-translate-y-0.5 active:scale-[0.98]"
     >
       <div className="relative w-full overflow-hidden rounded-xl bg-slate-100" style={{ aspectRatio: `1 / ${ratio}` }}>
         {cover && !failed ? (

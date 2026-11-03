@@ -40,6 +40,11 @@ yarn-error.log*
 *.tsbuildinfo
 next-env.d.ts
 
+# local databases & ide
+local.db
+local.db*
+.vscode/
+
 # local sqlite
 local.db*
 maintenance_*.md
