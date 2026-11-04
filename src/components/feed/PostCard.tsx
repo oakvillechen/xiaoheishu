@@ -115,7 +115,32 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
             </div>
           )}
 
-          <ReactionButton kind="like" postId={post.id} initialCount={post.likeCount ?? 0} variant="card" />
+          <div className="relative z-20 flex items-center gap-1">
+            <button
+              type="button"
+              onClick={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
+                const cleanTags = post.tags
+                  ? post.tags
+                      .split(',')
+                      .map((t: string) => t.trim())
+                      .filter(Boolean)
+                      .map((t: string) => `#${t.replace(/\s+/g, '')}`)
+                      .join(' ')
+                  : '';
+                const text = cleanTags ? `${post.title}\n\n${cleanTags}` : post.title;
+                window.open(`https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(postUrl)}`, '_blank', 'noopener,noreferrer');
+              }}
+              className="flex h-5 w-5 items-center justify-center rounded-full text-slate-400 hover:text-black hover:bg-slate-100 active:scale-90 transition-all"
+              title="一键转发到 X"
+              aria-label="一键转发到 X"
+            >
+              <XLogoIcon className="h-3 w-3" />
+            </button>
+            <ReactionButton kind="like" postId={post.id} initialCount={post.likeCount ?? 0} variant="card" />
+          </div>
         </div>
       </div>
 
@@ -126,6 +151,14 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
         aria-label={`查看详情：${post.title}`}
       />
     </article>
+  );
+}
+
+function XLogoIcon({ className = 'h-3.5 w-3.5' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
   );
 }
 

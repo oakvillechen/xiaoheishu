@@ -57,6 +57,14 @@ function formatDate(value: string | null | undefined) {
   return date.toLocaleDateString('zh-CN', { timeZone: 'America/Toronto' });
 }
 
+function XLogoIcon({ className = 'h-4 w-4' }: { className?: string }) {
+  return (
+    <svg viewBox="0 0 24 24" aria-hidden="true" className={className} fill="currentColor">
+      <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 24.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z" />
+    </svg>
+  );
+}
+
 export default function PostDetailClient({ postId, initialData }: { postId: string; initialData: PostDetailData }) {
   const params = { id: postId };
   const router = useRouter();
@@ -202,6 +210,22 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
     }
   };
 
+  const handleShareToX = () => {
+    if (!post) return;
+    const postUrl = typeof window !== 'undefined' ? window.location.href : `https://xiaoheishu.com/posts/${post.id}`;
+    const cleanTags = post.tags
+      ? post.tags
+          .split(',')
+          .map((t: string) => t.trim())
+          .filter(Boolean)
+          .map((t: string) => `#${t.replace(/\s+/g, '')}`)
+          .join(' ')
+      : '';
+    const text = cleanTags ? `${post.title}\n\n${cleanTags}` : post.title;
+    const xUrl = `https://x.com/intent/post?text=${encodeURIComponent(text)}&url=${encodeURIComponent(postUrl)}`;
+    window.open(xUrl, '_blank', 'noopener,noreferrer');
+  };
+
   const scrollToComments = () => {
     commentsSectionRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
@@ -293,6 +317,15 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
               }`}
             >
               {isFollowed ? '已关注' : '关注'}
+            </button>
+            <button
+              type="button"
+              onClick={handleShareToX}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-slate-700 hover:text-black active:bg-slate-100 active:scale-95 transition-all"
+              aria-label="一键转发到 X"
+              title="一键转发到 X"
+            >
+              <XLogoIcon className="h-4 w-4" />
             </button>
             <button
               type="button"
@@ -390,6 +423,15 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
                 <Calendar className="h-3.5 w-3.5" />
                 {formatDate(post?.createdAt)}
               </span>
+              <button
+                type="button"
+                onClick={handleShareToX}
+                className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white hover:bg-black text-[12px] font-medium shadow-sm active:scale-95 transition-all"
+                title="一键转发到 X (Twitter)"
+              >
+                <XLogoIcon className="h-3 w-3" />
+                <span>转发到 X</span>
+              </button>
               {post?.id && (
                 <div className="ml-auto">
                   <AdminDeletePostButton postId={post.id} />
@@ -496,6 +538,17 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
             >
               <MessageCircle className="h-5 w-5" />
               <span className="text-xs font-medium">{comments.length}</span>
+            </button>
+
+            {/* Share to X */}
+            <button
+              type="button"
+              onClick={handleShareToX}
+              className="flex items-center justify-center h-8 w-8 rounded-full text-slate-700 hover:text-black active:scale-90 transition-transform"
+              aria-label="一键转发到 X"
+              title="一键转发到 X"
+            >
+              <XLogoIcon className="h-4.5 w-4.5" />
             </button>
           </div>
         </footer>
@@ -642,6 +695,15 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
                   <Calendar className="h-3.5 w-3.5" />
                   {formatDate(post?.createdAt)}
                 </span>
+                <button
+                  type="button"
+                  onClick={handleShareToX}
+                  className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-slate-900 text-white hover:bg-black text-[12px] font-medium shadow-sm active:scale-95 transition-all"
+                  title="一键转发到 X (Twitter)"
+                >
+                  <XLogoIcon className="h-3 w-3" />
+                  <span>转发到 X</span>
+                </button>
                 {post?.id && (
                   <div className="ml-auto">
                     <AdminDeletePostButton postId={post.id} />
@@ -715,6 +777,16 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
                     <ReactionButton kind="favorite" postId={post.id} initialCount={post.favoriteCount ?? 0} fetchOnMount />
                   </>
                 )}
+                <button
+                  type="button"
+                  onClick={handleShareToX}
+                  className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full bg-slate-900 text-white hover:bg-black text-xs font-medium transition-all"
+                  aria-label="一键转发到 X"
+                  title="一键转发到 X"
+                >
+                  <XLogoIcon className="h-3.5 w-3.5" />
+                  <span>转发到 X</span>
+                </button>
                 <button
                   type="button"
                   onClick={handleShare}
