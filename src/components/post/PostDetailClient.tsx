@@ -19,7 +19,7 @@ import { Button } from '@/components/ui/button';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 import { displayCityName, normalizeCityName, CITIES } from '@/lib/constants/cities';
-import { cityPath } from '@/lib/site';
+import { cityPath, SITE_URL } from '@/lib/site';
 import { cloudinaryThumb } from '@/lib/image-url';
 import AdminDeletePostButton from '@/components/post/AdminDeletePostButton';
 import ReactionButton from '@/components/post/ReactionButton';
@@ -212,7 +212,7 @@ export default function PostDetailClient({ postId, initialData }: { postId: stri
 
   const handleShareToX = () => {
     if (!post) return;
-    const postUrl = typeof window !== 'undefined' ? window.location.href : `https://xiaoheishu.com/posts/${post.id}`;
+    const postUrl = `${SITE_URL}/posts/${post.id}`;
     const cleanTags = post.tags
       ? post.tags
           .split(',')

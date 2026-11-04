@@ -39,4 +39,10 @@ export function excerpt(text: string | null | undefined, max = 120): string {
 }
 
 /** 默认分享图（src/app/opengraph-image.tsx 生成） */
-export const DEFAULT_OG_IMAGE = { url: '/opengraph-image', width: 1200, height: 630, alt: '小黑书 - 加拿大华人生活社区' };
+export const DEFAULT_OG_IMAGE = {
+  url: `${SITE_URL}/opengraph-image`,
+  width: 1200,
+  height: 630,
+  alt: '小黑书 - 加拿大华人生活社区',
+  type: 'image/png',
+};

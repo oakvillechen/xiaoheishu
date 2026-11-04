@@ -6,6 +6,7 @@ import { getPostDetail, parsePostId } from '@/lib/posts-server';
 import { displayCityName } from '@/lib/constants/cities';
 import { displayCategoryName } from '@/lib/constants/categories';
 import { DEFAULT_OG_IMAGE, SITE_NAME, SITE_URL, categoryPath, cityPath, excerpt } from '@/lib/site';
+import { getSocialShareImageUrl } from '@/lib/image-url';
 import { normalizeCityName } from '@/lib/constants/cities';
 import { normalizeCategory } from '@/lib/constants/categories';
 
@@ -49,9 +50,19 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
 
   const { post } = detail;
   const description = excerpt(post.content, 120) || post.title;
-  const cover = absoluteImage(post.imageUrls[0]);
+  const rawCover = post.imageUrls[0];
+  const cover = rawCover ? getSocialShareImageUrl(absoluteImage(rawCover)) : undefined;
   const url = `/posts/${post.id}`;
-  const images = cover ? [{ url: cover, alt: post.title }] : [DEFAULT_OG_IMAGE];
+  const ogImage = cover
+    ? {
+        url: cover,
+        width: 1200,
+        height: 630,
+        alt: post.title,
+        type: 'image/jpeg',
+      }
+    : DEFAULT_OG_IMAGE;
+
   const keywords = [
     ...(post.tags || '').split(/[,，#\s]+/).map((t) => t.trim()).filter(Boolean),
     post.city ? displayCityName(post.city) : '',
@@ -71,13 +82,13 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
       siteName: SITE_NAME,
       locale: 'zh_CN',
       publishedTime: post.createdAt ? post.createdAt.toISOString() : undefined,
-      images,
+      images: [ogImage],
     },
     twitter: {
       card: 'summary_large_image',
       title: post.title,
       description,
-      images: [cover || DEFAULT_OG_IMAGE.url],
+      images: [ogImage.url],
     },
   };
 }

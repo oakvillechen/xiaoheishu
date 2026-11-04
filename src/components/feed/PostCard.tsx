@@ -6,6 +6,7 @@ import { MapPin, Images } from 'lucide-react';
 import { useRouter } from 'next/navigation';
 import { displayCityName } from '@/lib/constants/cities';
 import { cloudinarySrcSet, cloudinaryThumb } from '@/lib/image-url';
+import { SITE_URL } from '@/lib/site';
 import ReactionButton from '@/components/post/ReactionButton';
 import { TEXT_ONLY_RATIO, coverRatio } from './masonry';
 
@@ -121,7 +122,7 @@ export default function PostCard({ post, priority = false }: PostCardProps) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                const postUrl = typeof window !== 'undefined' ? `${window.location.origin}/posts/${post.id}` : '';
+                const postUrl = `${SITE_URL}/posts/${post.id}`;
                 const cleanTags = post.tags
                   ? post.tags
                       .split(',')

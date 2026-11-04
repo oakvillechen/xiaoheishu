@@ -26,3 +26,15 @@ export function cloudinaryInfoUrl(url: string): string | null {
   const m = url.match(CLOUDINARY_UPLOAD);
   return m ? `${m[1]}fl_getinfo/${m[2]}` : null;
 }
+
+/**
+ * 生成适合 Twitter Card / Open Graph 的社交媒体分享封面图
+ * - 规格 1200x630（1.91:1 最佳比例，适合 summary_large_image）
+ * - 必须为 baseline JPEG (fl_progressive:none)，避免 Twitter 爬虫无法解析渐进式 JPEG 导致图片空白
+ */
+export function getSocialShareImageUrl(url: string | null | undefined): string | undefined {
+  if (!url) return undefined;
+  const m = url.match(CLOUDINARY_UPLOAD);
+  if (!m) return url;
+  return `${m[1]}w_1200,h_630,c_fill,fl_progressive:none,f_jpg,q_auto/${m[2]}`;
+}
